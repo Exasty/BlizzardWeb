@@ -1,0 +1,1476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Blizzard Client — Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --bg: #F4F7FB;
+  --bg-alt: #E8EFF6;
+  --panel: #FFFFFF;
+  --ink: #0B1420;
+  --frost: #2C6FA8;
+  --frost-bright: #4FB8E8;
+  --ghost: rgba(11,20,32,0.035);
+  --ghost-mid: rgba(11,20,32,0.05);
+  --ghost-strong: rgba(11,20,32,0.09);
+  --border: rgba(11,20,32,0.10);
+  --border-bright: rgba(11,20,32,0.18);
+  --dim: rgba(11,20,32,0.58);
+  --dim2: rgba(11,20,32,0.38);
+  --green: #16A34A;
+  --red: #DC2626;
+  --yellow: #B45309;
+  --blue: #5865F2;
+  --radius: 14px;
+  --radius-sm: 10px;
+}
+
+html { scroll-behavior: smooth; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: 'Inter', sans-serif;
+  overflow-x: hidden;
+  min-height: 100vh;
+  cursor: none;
+}
+
+#cursor {
+  width: 10px; height: 10px; background: var(--ink); border-radius: 50%;
+  position: fixed; pointer-events: none; z-index: 9999;
+  transform: translate(-50%,-50%); mix-blend-mode: difference;
+  transition: width .2s, height .2s;
+}
+#cursor-trail {
+  width: 32px; height: 32px; border: 1px solid rgba(11,20,32,.22); border-radius: 50%;
+  position: fixed; pointer-events: none; z-index: 9998;
+  transform: translate(-50%,-50%);
+  transition: left .1s ease, top .1s ease;
+}
+body:has(a:hover) #cursor,
+body:has(button:hover) #cursor { width: 18px; height: 18px; }
+
+#bg-canvas { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
+.noise {
+  position: fixed; inset: 0; z-index: 1; pointer-events: none; opacity: .02;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 200px 200px;
+}
+.top-glow {
+  position: fixed; top: -200px; left: 50%; transform: translateX(-50%);
+  width: 700px; height: 400px;
+  background: radial-gradient(ellipse at 50% 0%, rgba(79,184,232,.16) 0%, transparent 70%);
+  pointer-events: none; z-index: 1;
+}
+
+.page { position: relative; z-index: 2; }
+
+nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  padding: 20px 48px;
+  display: flex; align-items: center; justify-content: space-between;
+  background: rgba(244,247,251,.82);
+  backdrop-filter: blur(24px);
+  border-bottom: 1px solid var(--border);
+  transition: padding .3s;
+}
+nav.scrolled { padding: 14px 48px; }
+.nav-logo {
+  display: flex; align-items: center; gap: 10px;
+  font-family: 'Space Grotesk'; font-size: 17px; font-weight: 700; letter-spacing: -.01em;
+  text-decoration: none; color: var(--ink);
+}
+.hex { width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.hex svg { width: 100%; height: 100%; }
+.nav-right { display: flex; align-items: center; gap: 14px; }
+.nav-avatar { width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--border-bright); }
+.nav-username { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--dim); letter-spacing: .06em; }
+.btn-ghost {
+  background: transparent; color: var(--dim);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 9px 20px;
+  font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 600;
+  letter-spacing: .06em; text-transform: uppercase;
+  cursor: pointer; text-decoration: none;
+  display: inline-flex; align-items: center; gap: 6px;
+  transition: border-color .2s, color .2s, transform .15s;
+}
+.btn-ghost:hover { border-color: var(--frost); color: var(--frost); transform: translateY(-1px); }
+
+main { padding: 110px 48px 80px; max-width: 1060px; margin: 0 auto; }
+
+.screen-login {
+  min-height: 82vh; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; text-align: center; gap: 28px;
+}
+.badge {
+  display: inline-flex; align-items: center; gap: 8px;
+  border: 1px solid rgba(44,111,168,.25); background: rgba(44,111,168,.08);
+  border-radius: 999px;
+  padding: 7px 16px;
+  font-family: 'JetBrains Mono', monospace; font-size: 10.5px;
+  letter-spacing: .1em; text-transform: uppercase; color: var(--frost);
+}
+.badge-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--frost); animation: pulse 2s infinite; }
+.hero-title { font-family: 'Space Grotesk'; font-size: clamp(50px,7vw,90px); font-weight: 700; line-height: .95; letter-spacing: -.03em; }
+.hero-title em { font-family: 'Instrument Serif', serif; font-style: italic; font-weight: 400; color: var(--frost); }
+.hero-sub { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--dim); max-width: 420px; line-height: 1.8; letter-spacing: .04em; }
+.btn-discord {
+  display: inline-flex; align-items: center; gap: 12px;
+  background: var(--blue); color: white;
+  border: none; padding: 16px 36px; border-radius: 999px;
+  font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 700;
+  letter-spacing: .04em; text-transform: uppercase;
+  cursor: pointer; text-decoration: none;
+  transition: transform .15s, filter .2s, box-shadow .2s;
+  box-shadow: 0 14px 30px -12px rgba(88,101,242,.55);
+}
+.btn-discord:hover { transform: translateY(-2px); filter: brightness(1.08); }
+.btn-discord svg { width: 18px; height: 18px; fill: white; }
+
+.dashboard { animation: fadeUp .5s .05s both; }
+
+@keyframes fadeUp { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.25} }
+
+.dash-header { margin-bottom: 44px; }
+.dash-eyebrow {
+  font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--dim);
+  letter-spacing: .18em; text-transform: uppercase; margin-bottom: 10px;
+  display: flex; align-items: center; gap: 10px;
+}
+.dash-eyebrow::before { content:''; width:20px; height:1px; background:var(--dim); }
+.dash-title { font-family: 'Space Grotesk'; font-size: clamp(28px,3.5vw,48px); font-weight: 700; letter-spacing: -.02em; line-height: 1; }
+.dash-title em { font-family: 'Instrument Serif', serif; font-style: italic; font-weight: 400; color: var(--frost); }
+
+.status-row {
+  display: grid; grid-template-columns: auto 1fr 1fr 1fr; gap: 0;
+  border: 1px solid var(--border); background: var(--panel);
+  border-radius: var(--radius);
+  margin-bottom: 20px; overflow: hidden;
+  box-shadow: 0 20px 50px -30px rgba(11,20,32,.15);
+}
+.stat-cell { padding: 28px 32px; border-right: 1px solid var(--border); position: relative; }
+.stat-cell:last-child { border-right: none; }
+.stat-cell::before {
+  content:''; position:absolute; inset:0;
+  background: linear-gradient(135deg, rgba(44,111,168,.035) 0%, transparent 60%);
+  pointer-events:none;
+}
+.stat-label { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--dim); letter-spacing: .18em; text-transform: uppercase; margin-bottom: 10px; }
+.stat-val { font-family: 'Space Grotesk'; font-size: 18px; font-weight: 700; letter-spacing: -.01em; line-height: 1; }
+
+.status-pill { display: inline-flex; align-items: center; gap: 7px; padding: 6px 12px; font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: .1em; text-transform: uppercase; }
+.status-pill.none    { background: rgba(180,83,9,.08); border: 1px solid rgba(180,83,9,.28); color: var(--yellow); }
+.status-pill.active  { background: rgba(22,163,74,.1);  border: 1px solid rgba(22,163,74,.28); color: var(--green); }
+.status-pill.expired { background: rgba(220,38,38,.1); border: 1px solid rgba(220,38,38,.28); color: var(--red); }
+.pill-dot { width: 5px; height: 5px; border-radius: 50%; animation: pulse 2.2s infinite; }
+.none .pill-dot { background: var(--yellow); }
+.active .pill-dot { background: var(--green); }
+.expired .pill-dot { background: var(--red); }
+
+.bar-wrap { margin-top: 10px; }
+.bar-track { height: 2px; background: var(--ghost-strong); overflow: hidden; }
+.bar-fill { height: 100%; background: var(--frost); transition: width 1.2s cubic-bezier(.4,0,.2,1); }
+.bar-sub { font-family:'JetBrains Mono',monospace; font-size:9px; color:var(--dim); margin-top:5px; }
+
+.key-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  border: 1px solid var(--border); background: var(--panel);
+  border-radius: var(--radius);
+  padding: 18px 24px; margin-bottom: 20px;
+}
+.key-inner { display: flex; flex-direction: column; gap: 5px; flex: 1; min-width: 0; }
+.key-label-sm { font-family:'JetBrains Mono',monospace; font-size:9px; color:var(--dim); letter-spacing:.16em; text-transform:uppercase; }
+.key-val { font-family:'JetBrains Mono',monospace; font-size:13px; color:rgba(11,20,32,.72); letter-spacing:.08em; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.key-btns { display:flex; gap:8px; flex-shrink:0; }
+.key-btn { background:transparent; border:1px solid var(--border); color:var(--dim); padding:7px 14px; font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.08em; text-transform:uppercase; cursor:pointer; transition:all .2s; }
+.key-btn:hover { border-color:var(--frost); color:var(--frost); }
+
+.cards { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--border); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 20px; overflow: hidden; }
+.card { background: var(--panel); padding: 32px 28px; position: relative; overflow: hidden; transition: background .25s; }
+.card::before { content:''; position:absolute; inset:0; background:var(--ghost); opacity:0; transition:opacity .25s; }
+.card:hover::before { opacity:1; }
+.card-icon { width: 40px; height: 40px; border: 1px solid var(--border-bright); border-radius: 10px; display: flex; align-items: center; justify-content: center; background: var(--ghost); margin-bottom: 18px; color: var(--frost); }
+.card-icon svg { width: 18px; height: 18px; }
+.card-tag { font-family:'JetBrains Mono',monospace; font-size:9px; color:var(--dim); letter-spacing:.16em; text-transform:uppercase; margin-bottom:6px; display:block; }
+.card-title { font-family: 'Space Grotesk'; font-size:18px; font-weight:700; letter-spacing:-.01em; margin-bottom:8px; }
+.card-desc { font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--dim); line-height:1.65; }
+.card.featured { background: rgba(44,111,168,.045); }
+.card.featured::after { content:''; position:absolute; top:0; left:0; right:0; height:2px; background: linear-gradient(90deg,transparent,var(--frost-bright),transparent); }
+.card-cta {
+  display: inline-flex; align-items: center; gap: 7px; margin-top: 18px;
+  font-size: 12px; font-weight: 600; text-decoration: none; color: var(--ink);
+  border-bottom: 1px solid var(--border); padding-bottom: 2px;
+  transition: border-color .2s; position: relative; z-index: 1; cursor: pointer;
+  background: none; border-left: none; border-top: none; border-right: none;
+  font-family: 'Inter', sans-serif; letter-spacing: .04em;
+}
+.card-cta:hover { border-bottom-color: var(--frost); color: var(--frost); }
+.btn-dl {
+  display: inline-flex; align-items: center; gap: 10px; margin-top: 18px;
+  background: var(--ink); color: #fff; border: none;
+  padding: 12px 28px;
+  font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 700;
+  letter-spacing: .05em; text-transform: uppercase;
+  cursor: pointer; text-decoration: none;
+  border-radius: 999px;
+  transition: transform .15s, opacity .15s;
+  position: relative; overflow: hidden; z-index: 1;
+}
+.btn-dl::after {
+  content:''; position:absolute; inset:0;
+  background:linear-gradient(90deg,transparent 0%,rgba(255,255,255,.25) 50%,transparent 100%);
+  transform:translateX(-100%); transition:transform .4s;
+}
+.btn-dl:hover { transform:translateY(-1px); }
+.btn-dl:hover::after { transform:translateX(100%); }
+.btn-dl.locked { opacity: .35; cursor: not-allowed; }
+.btn-dl.locked:hover { transform: none; }
+
+.redeem-section { border: 1px solid var(--border); background: var(--panel); border-radius: var(--radius); padding: 36px; margin-bottom: 20px; }
+.redeem-section-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 24px; gap: 20px; }
+.redeem-section-title { font-family: 'Space Grotesk'; font-size: 20px; font-weight: 700; letter-spacing: -.01em; margin-bottom: 6px; }
+.redeem-section-sub { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--dim); line-height: 1.65; }
+.redeem-inner { display: flex; gap: 12px; align-items: flex-start; flex-wrap: wrap; }
+.redeem-input {
+  background: rgba(11,20,32,.03); border: 1px solid var(--border-bright); color: var(--ink);
+  border-radius: var(--radius-sm);
+  padding: 14px 16px; flex: 1; min-width: 220px;
+  font-family: 'JetBrains Mono', monospace; font-size: 13px; letter-spacing: .08em;
+  outline: none; transition: border-color .2s;
+}
+.redeem-input:focus { border-color: var(--frost); }
+.redeem-input::placeholder { color: var(--dim2); }
+.btn-redeem {
+  background: var(--ink); color: #fff; border: none; padding: 14px 32px;
+  font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 700;
+  letter-spacing: .06em; text-transform: uppercase; cursor: pointer; white-space: nowrap;
+  border-radius: 999px;
+  transition: transform .15s, opacity .2s;
+}
+.btn-redeem:hover { transform: translateY(-1px); }
+.btn-redeem:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+.redeem-msg { font-family: 'JetBrains Mono', monospace; font-size: 12px; letter-spacing: .06em; margin-top: 12px; min-height: 18px; display: flex; align-items: center; gap: 8px; }
+.redeem-msg.ok  { color: var(--green); }
+.redeem-msg.err { color: var(--red); }
+
+#toast {
+  position:fixed; bottom:32px; right:32px; z-index:9000;
+  background:var(--ink); border:1px solid rgba(255,255,255,.12);
+  backdrop-filter:blur(16px);
+  padding:14px 22px; font-family:'JetBrains Mono',monospace; font-size:12px; letter-spacing:.06em; color:#fff;
+  opacity:0; transform:translateY(8px); transition:opacity .25s, transform .25s;
+  pointer-events:none; max-width:320px;
+  box-shadow: 0 20px 45px -15px rgba(11,20,32,.4);
+}
+#toast.show  { opacity:1; transform:translateY(0); }
+#toast.green { border-color:rgba(74,222,128,.4); color:#4ade80; }
+#toast.red   { border-color:rgba(248,113,113,.4); color:#f87171; }
+
+footer { border-top: 1px solid var(--border); padding: 40px 48px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:20px; }
+.footer-logo { display:flex; align-items:center; gap:9px; font-family: 'Space Grotesk'; font-size:14px; font-weight:700; color:var(--ink); text-decoration:none; }
+.footer-copy { font-family:'JetBrains Mono',monospace; font-size:10px; color:var(--dim2); letter-spacing:.06em; }
+
+@media(max-width:860px){
+  nav { padding:16px 20px; }
+  main { padding:90px 20px 60px; }
+  .status-row { grid-template-columns:1fr 1fr; }
+  .cards { grid-template-columns:1fr; }
+  footer { padding:28px 20px; flex-direction:column; text-align:center; }
+  .stat-cell { padding:20px; }
+  .redeem-section { padding:24px; }
+}
+
+/* HWID RESET SECTION */
+.hwid-section {
+  border: 1px solid var(--border); background: var(--panel);
+  border-radius: var(--radius);
+  padding: 36px; margin-bottom: 20px; display: none;
+}
+.hwid-section-title { font-family: 'Space Grotesk'; font-size: 20px; font-weight: 700; letter-spacing: -.01em; margin-bottom: 6px; }
+.hwid-section-sub { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--dim); line-height: 1.65; }
+.hwid-dots {
+  display: flex; gap: 8px; margin: 18px 0 10px;
+}
+.hwid-dot {
+  width: 10px; height: 10px; border-radius: 50%;
+  background: var(--ghost-strong); border: 1px solid var(--border-bright);
+  transition: background .3s, border-color .3s;
+}
+.hwid-dot.used { background: var(--green); border-color: rgba(22,163,74,.5); }
+.hwid-dot.empty { background: var(--ghost-strong); border-color: var(--border-bright); }
+.hwid-info { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--dim); margin-bottom: 18px; }
+.btn-hwid-reset {
+  background: transparent; color: var(--ink); border: 1px solid var(--border-bright);
+  border-radius: 999px;
+  padding: 12px 28px;
+  font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 700;
+  letter-spacing: .06em; text-transform: uppercase; cursor: pointer;
+  border-radius: 999px;
+  transition: background .2s, transform .15s;
+}
+.btn-hwid-reset:hover { background: var(--ghost-strong); border-color: var(--frost); transform: translateY(-1px); }
+.btn-hwid-reset:disabled { opacity: .35; cursor: not-allowed; transform: none; }
+.hwid-msg { font-family: 'JetBrains Mono', monospace; font-size: 12px; letter-spacing: .06em; margin-top: 12px; min-height: 18px; }
+.hwid-msg.ok  { color: var(--green); }
+.hwid-msg.err { color: var(--red); }
+
+/* ── REVIEW SECTION ── */
+.review-section {
+  border: 1px solid var(--border); background: var(--panel);
+  border-radius: var(--radius);
+  padding: 36px; margin-bottom: 20px; display: none;
+}
+.review-section-title { font-family: 'Space Grotesk'; font-size: 20px; font-weight: 700; letter-spacing: -.01em; margin-bottom: 6px; }
+.review-section-sub { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--dim); line-height: 1.65; margin-bottom: 20px; }
+.review-stars {
+  display: flex; gap: 8px; margin-bottom: 16px;
+}
+.star-btn {
+  background: none; border: none; cursor: pointer;
+  font-size: 24px; color: var(--dim2);
+  transition: color .15s, transform .15s;
+  padding: 2px;
+}
+.star-btn.active, .star-btn:hover { color: var(--yellow); transform: scale(1.15); }
+.review-textarea {
+  width: 100%; min-height: 100px; resize: vertical;
+  background: rgba(11,20,32,.03); border: 1px solid var(--border-bright); color: var(--ink);
+  border-radius: var(--radius-sm);
+  padding: 14px 16px;
+  font-family: 'JetBrains Mono', monospace; font-size: 12px; letter-spacing: .04em; line-height: 1.65;
+  outline: none; transition: border-color .2s;
+  margin-bottom: 12px;
+}
+.review-textarea:focus { border-color: var(--frost); }
+.review-textarea::placeholder { color: var(--dim2); }
+.review-char-count { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--dim2); text-align: right; margin-top: -8px; margin-bottom: 12px; }
+.btn-review {
+  background: var(--ink); color: #fff; border: none; padding: 14px 32px;
+  font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 700;
+  letter-spacing: .06em; text-transform: uppercase; cursor: pointer;
+  border-radius: 999px;
+  transition: transform .15s, opacity .2s;
+}
+.btn-review:hover { transform: translateY(-1px); }
+.btn-review:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+.review-msg { font-family: 'JetBrains Mono', monospace; font-size: 12px; letter-spacing: .06em; margin-top: 12px; min-height: 18px; }
+.review-msg.ok  { color: var(--green); }
+.review-msg.err { color: var(--red); }
+
+/* ── IMAGE UPLOAD SECTION ── */
+.imgup-section {
+  border: 1px solid var(--border); background: var(--panel);
+  border-radius: var(--radius);
+  padding: 36px; margin-bottom: 20px; display: none;
+}
+.imgup-section-title { font-family: 'Space Grotesk'; font-size: 20px; font-weight: 700; letter-spacing: -.01em; margin-bottom: 6px; }
+.imgup-section-sub { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--dim); line-height: 1.65; margin-bottom: 20px; }
+.imgup-drop {
+  border: 1px dashed var(--border-bright); background: rgba(11,20,32,.025);
+  border-radius: var(--radius-sm);
+  padding: 36px 24px; text-align: center; cursor: pointer;
+  transition: border-color .2s, background .2s; margin-bottom: 12px;
+  position: relative;
+}
+.imgup-drop:hover, .imgup-drop.dragover { border-color: var(--frost); background: var(--ghost-mid); }
+.imgup-drop input[type=file] { position:absolute; inset:0; opacity:0; cursor:pointer; width:100%; height:100%; }
+.imgup-drop-icon { margin-bottom: 12px; }
+.imgup-drop-icon svg { width: 28px; height: 28px; stroke: var(--dim); }
+.imgup-drop-label { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--dim); line-height: 1.65; }
+.imgup-drop-label strong { color: var(--ink); }
+.imgup-preview {
+  display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px;
+}
+.imgup-thumb {
+  width: 72px; height: 72px; object-fit: cover;
+  border: 1px solid var(--border-bright); border-radius: 8px; position: relative;
+}
+.imgup-thumb-wrap { position: relative; }
+.imgup-thumb-rm {
+  position: absolute; top: -6px; right: -6px;
+  width: 18px; height: 18px; border-radius: 50%;
+  background: var(--red); border: none; color: white;
+  font-size: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+  font-weight: 700; line-height: 1;
+}
+.imgup-caption {
+  background: rgba(11,20,32,.03); border: 1px solid var(--border-bright); color: var(--ink);
+  border-radius: var(--radius-sm);
+  padding: 12px 16px; width: 100%; margin-bottom: 12px;
+  font-family: 'JetBrains Mono', monospace; font-size: 12px; letter-spacing: .04em;
+  outline: none; transition: border-color .2s;
+}
+.imgup-caption:focus { border-color: var(--frost); }
+.imgup-caption::placeholder { color: var(--dim2); }
+.btn-imgup {
+  background: var(--ink); color: #fff; border: none; padding: 14px 32px;
+  font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 700;
+  letter-spacing: .06em; text-transform: uppercase; cursor: pointer;
+  border-radius: 999px;
+  transition: transform .15s, opacity .2s;
+}
+.btn-imgup:hover { transform: translateY(-1px); }
+.btn-imgup:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+.imgup-msg { font-family: 'JetBrains Mono', monospace; font-size: 12px; letter-spacing: .06em; margin-top: 12px; min-height: 18px; }
+.imgup-msg.ok  { color: var(--green); }
+.imgup-msg.err { color: var(--red); }
+
+/* ── IMAGE UPLOAD MODAL ── */
+#imgup-modal-overlay {
+  display: none;
+  position: fixed; inset: 0; z-index: 8000;
+  background: rgba(11,20,32,.55);
+  backdrop-filter: blur(6px);
+  align-items: center; justify-content: center;
+  padding: 20px;
+}
+#imgup-modal-overlay.open { display: flex; animation: fadeIn .2s both; }
+
+#imgup-modal {
+  background: var(--panel);
+  border: 1px solid var(--border-bright);
+  border-radius: var(--radius);
+  box-shadow: 0 30px 70px -20px rgba(11,20,32,.4);
+  width: 100%; max-width: 500px;
+  padding: 32px;
+  position: relative;
+  animation: slideUp .22s both;
+}
+.imgup-modal-close {
+  position: absolute; top: 16px; right: 16px;
+  background: none; border: none; color: var(--dim2);
+  font-size: 18px; cursor: pointer; line-height: 1;
+  transition: color .15s;
+}
+.imgup-modal-close:hover { color: var(--ink); }
+.imgup-modal-header { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+.imgup-modal-icon {
+  width: 40px; height: 40px; border: 1px solid rgba(180,83,9,.3);
+  background: rgba(180,83,9,.08); border-radius: 10px;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.imgup-modal-icon svg { width: 18px; height: 18px; stroke: var(--yellow); }
+.imgup-modal-title { font-family: 'Space Grotesk'; font-size: 18px; font-weight: 700; letter-spacing: -.01em; }
+.imgup-modal-sub { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--dim); margin-top: 2px; }
+.imgup-modal-warning {
+  background: rgba(180,83,9,.06);
+  border: 1px solid rgba(180,83,9,.25); border-radius: var(--radius-sm);
+  padding: 16px 18px; margin-bottom: 20px; text-align: center;
+}
+.imgup-modal-warning-title {
+  font-size: 13px; font-weight: 800; letter-spacing: .01em;
+  color: var(--yellow); text-transform: uppercase;
+}
+.imgup-modal-warning-sub { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: rgba(180,83,9,.85); margin-top: 4px; }
+.imgup-modal-rules-label { font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; margin-bottom: 12px; color: var(--dim); }
+.imgup-modal-rule {
+  display: flex; align-items: flex-start; gap: 12px;
+  padding: 11px 0;
+  border-bottom: 1px solid var(--border);
+  font-family: 'JetBrains Mono', monospace; font-size: 12px; line-height: 1.55; color: var(--dim);
+}
+.imgup-modal-rule:last-of-type { border-bottom: none; }
+.imgup-modal-rule.highlight { color: var(--ink); font-weight: 500; }
+.imgup-modal-rule.highlight .imgup-y { color: var(--yellow); }
+.imgup-y { color: #B45309; font-size: 13px; flex-shrink: 0; margin-top: 1px; }
+.imgup-modal-footer { margin-top: 20px; display: flex; align-items: center; gap: 14px; }
+.imgup-modal-checkbox-wrap {
+  display: flex; align-items: center; gap: 8px;
+  font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--dim);
+  cursor: pointer; user-select: none;
+}
+.imgup-modal-checkbox-wrap input[type=checkbox] {
+  width: 14px; height: 14px; accent-color: var(--yellow); cursor: pointer; flex-shrink: 0;
+}
+.imgup-modal-btn-confirm {
+  flex: 1; background: var(--yellow); color: #fff; border: none;
+  padding: 14px 20px;
+  font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 700;
+  letter-spacing: .05em; text-transform: uppercase;
+  cursor: pointer;
+  border-radius: 999px;
+  transition: filter .2s, transform .15s, opacity .2s;
+}
+.imgup-modal-btn-confirm:hover { filter: brightness(1.1); transform: translateY(-1px); }
+.imgup-modal-btn-confirm:disabled { opacity: .35; cursor: not-allowed; transform: none; filter: none; }
+
+/* ── DOWNLOAD MODAL ── */
+#dl-modal-overlay {
+  display: none;
+  position: fixed; inset: 0; z-index: 8000;
+  background: rgba(11,20,32,.55);
+  backdrop-filter: blur(6px);
+  align-items: center; justify-content: center;
+  padding: 20px;
+}
+#dl-modal-overlay.open { display: flex; animation: fadeIn .2s both; }
+@keyframes fadeIn { from{opacity:0} to{opacity:1} }
+
+#dl-modal {
+  background: var(--panel);
+  border: 1px solid var(--border-bright);
+  border-radius: var(--radius);
+  box-shadow: 0 30px 70px -20px rgba(11,20,32,.4);
+  width: 100%; max-width: 500px;
+  padding: 32px;
+  position: relative;
+  animation: slideUp .22s both;
+}
+@keyframes slideUp { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
+
+.dlm-close {
+  position: absolute; top: 16px; right: 16px;
+  background: none; border: none; color: var(--dim2);
+  font-size: 18px; cursor: pointer; line-height: 1;
+  transition: color .15s;
+}
+.dlm-close:hover { color: var(--ink); }
+
+.dlm-header { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+.dlm-icon {
+  width: 40px; height: 40px; border: 1px solid rgba(220,38,38,.3);
+  background: rgba(220,38,38,.08); border-radius: 10px;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.dlm-icon svg { width: 18px; height: 18px; stroke: var(--red); }
+.dlm-title { font-family: 'Space Grotesk'; font-size: 18px; font-weight: 700; letter-spacing: -.01em; }
+.dlm-sub { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--dim); margin-top: 2px; }
+
+.dlm-warning {
+  background: rgba(220,38,38,.06);
+  border: 1px solid rgba(220,38,38,.25); border-radius: var(--radius-sm);
+  padding: 16px 18px; margin-bottom: 20px; text-align: center;
+}
+.dlm-warning-title {
+  font-size: 13px; font-weight: 800; letter-spacing: .01em;
+  color: var(--red); text-transform: uppercase;
+}
+.dlm-warning-sub { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: rgba(220,38,38,.85); margin-top: 4px; }
+
+.dlm-rules-label { font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; margin-bottom: 12px; color: var(--dim); }
+
+.dlm-rule {
+  display: flex; align-items: flex-start; gap: 12px;
+  padding: 11px 0;
+  border-bottom: 1px solid var(--border);
+  font-family: 'JetBrains Mono', monospace; font-size: 12px; line-height: 1.55; color: var(--dim);
+}
+.dlm-rule:last-of-type { border-bottom: none; }
+.dlm-rule.highlight { color: var(--ink); font-weight: 500; }
+.dlm-rule.highlight .dlm-x { color: var(--red); }
+.dlm-x { color: rgba(220,38,38,.7); font-size: 13px; flex-shrink: 0; margin-top: 1px; }
+
+.dlm-footer { margin-top: 20px; display: flex; align-items: center; gap: 14px; }
+.dlm-checkbox-wrap {
+  display: flex; align-items: center; gap: 8px;
+  font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--dim);
+  cursor: pointer; user-select: none;
+}
+.dlm-checkbox-wrap input[type=checkbox] {
+  width: 14px; height: 14px; accent-color: var(--red); cursor: pointer; flex-shrink: 0;
+}
+.dlm-btn-confirm {
+  flex: 1; background: var(--red); color: white; border: none;
+  padding: 14px 20px;
+  font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 700;
+  letter-spacing: .05em; text-transform: uppercase;
+  cursor: pointer;
+  border-radius: 999px;
+  transition: filter .2s, transform .15s, opacity .2s;
+}
+.dlm-btn-confirm:hover { filter: brightness(1.08); transform: translateY(-1px); }
+.dlm-btn-confirm:disabled { opacity: .35; cursor: not-allowed; transform: none; filter: none; }
+</style>
+</head>
+<body>
+
+<div id="cursor"></div>
+<div id="cursor-trail"></div>
+<canvas id="bg-canvas"></canvas>
+<div class="noise"></div>
+<div class="top-glow"></div>
+<div id="toast"></div>
+
+<!-- DOWNLOAD MODAL -->
+<div id="dl-modal-overlay">
+  <div id="dl-modal">
+    <button class="dlm-close" id="dlm-close">✕</button>
+
+    <div class="dlm-header">
+      <div class="dlm-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+          <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+        </svg>
+      </div>
+      <div>
+        <div class="dlm-title">Read Before Downloading</div>
+        <div class="dlm-sub">Your license is checked on every launch.</div>
+      </div>
+    </div>
+
+    <div class="dlm-warning">
+      <div class="dlm-warning-title">ANY VIOLATION = LICENSE REVOKED + PERMANENT BAN</div>
+      <div class="dlm-warning-sub">Instant. No warnings. No second chances.</div>
+    </div>
+
+    <div class="dlm-rules-label">Bannable offenses</div>
+
+    <div class="dlm-rule highlight">
+      <span class="dlm-x">✕</span>
+      <span>SHARING OR RESELLING THIS FILE. Redistribution, leaking to others, or uploading anywhere. All of it.</span>
+    </div>
+    <div class="dlm-rule">
+      <span class="dlm-x">✕</span>
+      <span>Sharing your license key with anyone — keys are single-user only.</span>
+    </div>
+    <div class="dlm-rule">
+      <span class="dlm-x">✕</span>
+      <span>Reverse engineering, decompiling, or modifying the client.</span>
+    </div>
+    <div class="dlm-rule">
+      <span class="dlm-x">✕</span>
+      <span>Using on more than one machine without an HWID reset.</span>
+    </div>
+    <div class="dlm-rule">
+      <span class="dlm-x">✕</span>
+      <span>Charging back or disputing your payment after downloading.</span>
+    </div>
+
+    <div class="dlm-footer">
+      <label class="dlm-checkbox-wrap">
+        <input type="checkbox" id="dlm-check"> Don't show this again
+      </label>
+      <button class="dlm-btn-confirm" id="dlm-confirm">I Understand. Download.</button>
+    </div>
+  </div>
+</div>
+
+<!-- IMAGE UPLOAD MODAL -->
+<div id="imgup-modal-overlay">
+  <div id="imgup-modal">
+    <button class="imgup-modal-close" id="imgup-modal-close">✕</button>
+
+    <div class="imgup-modal-header">
+      <div class="imgup-modal-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+          <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+        </svg>
+      </div>
+      <div>
+        <div class="imgup-modal-title">Before You Upload</div>
+        <div class="imgup-modal-sub">Images are posted publicly in our Discord server.</div>
+      </div>
+    </div>
+
+    <div class="imgup-modal-warning">
+      <div class="imgup-modal-warning-title">INAPPROPRIATE UPLOADS = INSTANT BAN</div>
+      <div class="imgup-modal-warning-sub">No appeals. We log your Discord ID on every upload.</div>
+    </div>
+
+    <div class="imgup-modal-rules-label">Upload rules</div>
+
+    <div class="imgup-modal-rule highlight">
+      <span class="imgup-y">⚠</span>
+      <span>NSFW, hateful, or offensive content is an instant permanent ban — no exceptions.</span>
+    </div>
+    <div class="imgup-modal-rule">
+      <span class="imgup-y">⚠</span>
+      <span>Only upload screenshots related to Blizzard Client. Off-topic images will be removed.</span>
+    </div>
+    <div class="imgup-modal-rule">
+      <span class="imgup-y">⚠</span>
+      <span>Don't include personal info (real names, addresses, IPs) in your screenshots.</span>
+    </div>
+    <div class="imgup-modal-rule">
+      <span class="imgup-y">⚠</span>
+      <span>Max 3 images per submission · PNG/JPG/GIF only · 8MB per file.</span>
+    </div>
+
+    <div class="imgup-modal-footer">
+      <label class="imgup-modal-checkbox-wrap">
+        <input type="checkbox" id="imgup-modal-check"> Don't show this again
+      </label>
+      <button class="imgup-modal-btn-confirm" id="imgup-modal-confirm">I Understand. Upload.</button>
+    </div>
+  </div>
+</div>
+
+<div class="page">
+  <nav id="navbar">
+    <a class="nav-logo" href="#">
+      <div class="hex"><svg viewBox="0 0 24 24" fill="none"><path d="M12 2v20M4 7l16 10M20 7L4 17" stroke="#2C6FA8" stroke-width="2" stroke-linecap="round"/></svg></div>BLIZZARD
+    </a>
+    <div class="nav-right" id="nav-user-area" style="display:none">
+      <img class="nav-avatar" id="nav-avatar" src="" alt="">
+      <span class="nav-username" id="nav-username"></span>
+      <button class="btn-ghost" id="btn-logout">Log out</button>
+    </div>
+  </nav>
+
+  <main>
+    <!-- LOGIN -->
+    <div class="screen-login" id="screen-login">
+      <div class="badge"><span class="badge-dot"></span> Members only</div>
+      <h1 class="hero-title">Your<br><em>Dashboard</em></h1>
+      <p class="hero-sub">Connect your Discord account to access your license, downloads, and account settings.</p>
+      <a class="btn-discord" href="#" id="btn-login">
+        <svg viewBox="0 0 71 55" xmlns="http://www.w3.org/2000/svg"><path d="M60.1 4.9A58.5 58.5 0 0 0 45.5.8a.2.2 0 0 0-.2.1c-.6 1.1-1.3 2.6-1.8 3.7a54.1 54.1 0 0 0-16.2 0 38 38 0 0 0-1.8-3.7.2.2 0 0 0-.2-.1A58.3 58.3 0 0 0 10.8 4.9a.2.2 0 0 0-.1.1C1.6 18.1-.9 31 .3 43.7v.1a58.8 58.8 0 0 0 17.9 9 .2.2 0 0 0 .2-.1c1.4-1.9 2.6-3.9 3.7-5.9a.2.2 0 0 0-.1-.3 38.7 38.7 0 0 1-5.5-2.6.2.2 0 0 1 0-.4l1.1-.9a.2.2 0 0 1 .2 0c11.5 5.3 24 5.3 35.4 0a.2.2 0 0 1 .2 0l1.1.9a.2.2 0 0 1 0 .4 36 36 0 0 1-5.5 2.6.2.2 0 0 0-.1.3 42.6 42.6 0 0 0 3.7 5.9.2.2 0 0 0 .2.1 58.6 58.6 0 0 0 17.9-9v-.1C73 29.1 69.7 16.3 60.2 5zm-41.7 30.8c-3.5 0-6.4-3.2-6.4-7.2s2.8-7.2 6.4-7.2c3.6 0 6.4 3.2 6.4 7.2 0 4-2.8 7.2-6.4 7.2zm23.7 0c-3.5 0-6.4-3.2-6.4-7.2s2.8-7.2 6.4-7.2c3.6 0 6.4 3.2 6.4 7.2 0 4-2.8 7.2-6.4 7.2z"/></svg>
+        Login with Discord
+      </a>
+    </div>
+
+    <!-- DASHBOARD -->
+    <div class="dashboard" id="screen-dashboard" style="display:none">
+      <div class="dash-header">
+        <div class="dash-eyebrow">Welcome back</div>
+        <h1 class="dash-title">Hey, <em id="dash-name">Player</em> 👋</h1>
+      </div>
+
+      <div class="status-row">
+        <div class="stat-cell">
+          <div class="stat-label">License Status</div>
+          <div id="dash-status-pill" class="status-pill none">
+            <span class="pill-dot"></span>
+            <span id="dash-status-text">No License</span>
+          </div>
+        </div>
+        <div class="stat-cell">
+          <div class="stat-label">Plan</div>
+          <div class="stat-val" id="dash-plan">—</div>
+        </div>
+        <div class="stat-cell">
+          <div class="stat-label">Expires</div>
+          <div class="stat-val" id="dash-expires">—</div>
+          <div class="bar-wrap" id="dash-bar-wrap" style="display:none">
+            <div class="bar-track"><div class="bar-fill" id="dash-bar-fill" style="width:0%"></div></div>
+            <div class="bar-sub" id="dash-bar-sub"></div>
+          </div>
+        </div>
+        <div class="stat-cell">
+          <div class="stat-label">Member Since</div>
+          <div class="stat-val" id="dash-since">—</div>
+        </div>
+      </div>
+
+      <div class="key-row" id="key-row" style="display:none">
+        <div class="key-inner">
+          <div class="key-label-sm">License Key</div>
+          <div class="key-val" id="dash-key">BLIZZ-••••-••••-••••-••••</div>
+        </div>
+        <div class="key-btns">
+          <button class="key-btn" id="btn-reveal">Reveal</button>
+          <button class="key-btn" id="btn-copy">Copy</button>
+        </div>
+      </div>
+
+      <div class="cards">
+        <div class="card featured">
+          <div class="card-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          </div>
+          <span class="card-tag">Latest Build</span>
+          <div class="card-title">Download Blizzard</div>
+          <div class="card-desc" id="dl-desc">Activate a license below to unlock your download.</div>
+          <a class="btn-dl locked" id="btn-download">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Download .jar
+          </a>
+        </div>
+        <div class="card">
+          <div class="card-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          </div>
+          <span class="card-tag">Support</span>
+          <div class="card-title">Discord Server</div>
+          <div class="card-desc">Open a ticket and get help from our team in under 24 hours.</div>
+          <a class="card-cta" href="https://discord.gg/your-invite" target="_blank">
+            Join Server
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          </a>
+        </div>
+        <div class="card">
+          <div class="card-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+          </div>
+          <span class="card-tag">Reference</span>
+          <div class="card-title">Documentation</div>
+          <div class="card-desc">Setup guide, module list, keybind reference, and FAQ.</div>
+          <a class="card-cta" href="#" target="_blank">Read Docs <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg></a>
+        </div>
+        <div class="card">
+          <div class="card-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+          </div>
+          <span class="card-tag">Billing</span>
+          <div class="card-title">Manage Account</div>
+          <div class="card-desc">Renewal options, invoice history, and subscription settings.</div>
+          <a class="card-cta" href="https://sellauth.com" target="_blank">Open Billing <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg></a>
+        </div>
+      </div>
+
+      <div class="redeem-section" id="redeem-section">
+        <div class="redeem-section-header">
+          <div>
+            <div class="redeem-section-title">Activate License</div>
+            <div class="redeem-section-sub">Enter the license key from your Discord ticket to unlock your download.</div>
+          </div>
+          <a class="btn-ghost" href="https://discord.gg/your-invite" target="_blank" style="white-space:nowrap;flex-shrink:0">Buy a Key →</a>
+        </div>
+        <div class="redeem-inner">
+          <input class="redeem-input" id="key-input" type="text" placeholder="BLZMN-XXXX-XXXX-XXXX-XXXX" spellcheck="false" autocomplete="off">
+          <button class="btn-redeem" id="btn-redeem">Activate</button>
+        </div>
+        <div class="redeem-msg" id="redeem-msg"></div>
+      </div>
+
+      <!-- HWID RESET SECTION -->
+      <div class="hwid-section" id="hwid-section">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:16px;gap:20px;">
+          <div>
+            <div class="hwid-section-title">HWID Reset</div>
+            <div class="hwid-section-sub">Locked to a new PC? Reset your hardware ID below.<br>You get <strong>2 resets per calendar month</strong>. Resets refresh on the 1st.</div>
+          </div>
+        </div>
+        <div class="hwid-dots">
+          <div class="hwid-dot" id="hwid-dot-1"></div>
+          <div class="hwid-dot" id="hwid-dot-2"></div>
+        </div>
+        <div class="hwid-info" id="hwid-info">Loading reset info...</div>
+        <button class="btn-hwid-reset" id="btn-hwid-reset" disabled>Reset HWID</button>
+        <div class="hwid-msg" id="hwid-msg"></div>
+      </div>
+
+      <!-- REVIEW SECTION -->
+      <div class="review-section" id="review-section">
+        <div class="review-section-title">Leave a Review</div>
+        <div class="review-section-sub">Share your experience with Blizzard Client. Reviews are posted in our Discord server for the community to see.</div>
+        <div class="review-stars" id="review-stars">
+          <button class="star-btn" data-star="1">★</button>
+          <button class="star-btn" data-star="2">★</button>
+          <button class="star-btn" data-star="3">★</button>
+          <button class="star-btn" data-star="4">★</button>
+          <button class="star-btn" data-star="5">★</button>
+        </div>
+        <textarea class="review-textarea" id="review-text" placeholder="Tell others what you think about Blizzard Client..." maxlength="500"></textarea>
+        <div class="review-char-count"><span id="review-char-used">0</span>/500</div>
+        <button class="btn-review" id="btn-review">Submit Review</button>
+        <div class="review-msg" id="review-msg"></div>
+      </div>
+
+      <!-- IMAGE UPLOAD SECTION -->
+      <div class="imgup-section" id="imgup-section">
+        <div class="imgup-section-title">Share a Screenshot</div>
+        <div class="imgup-section-sub">Upload screenshots of Blizzard Client in action. They'll be posted in our Discord showcase channel.</div>
+        <div class="imgup-drop" id="imgup-drop">
+          <input type="file" id="imgup-file" accept="image/png,image/jpeg,image/gif" multiple>
+          <div class="imgup-drop-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/>
+              <polyline points="21 15 16 10 5 21"/>
+            </svg>
+          </div>
+          <div class="imgup-drop-label"><strong>Click to browse</strong> or drag & drop<br>PNG · JPG · GIF · up to 8MB each · max 3 files</div>
+        </div>
+        <div class="imgup-preview" id="imgup-preview"></div>
+        <input class="imgup-caption" id="imgup-caption" type="text" placeholder="Optional caption..." maxlength="120">
+        <button class="btn-imgup" id="btn-imgup">Send to Discord</button>
+        <div class="imgup-msg" id="imgup-msg"></div>
+      </div>
+
+    </div>
+  </main>
+
+  <footer>
+    <a class="footer-logo" href="#"><div class="hex"><svg viewBox="0 0 24 24" fill="none"><path d="M12 2v20M4 7l16 10M20 7L4 17" stroke="#2C6FA8" stroke-width="2" stroke-linecap="round"/></svg></div>BLIZZARD CLIENT</a>
+    <span class="footer-copy">© 2026 Blizzard Client · All rights reserved</span>
+  </footer>
+</div>
+
+<script>
+// ── CONFIG ────────────────────────────────────────────────────
+const DISCORD_CLIENT_ID = '1511344894290170046';
+const REDIRECT_URI      = 'https://blizzardweb.exasty.workers.dev/callback';
+const API_URL              = 'https://blizzard-server-production-98aa.up.railway.app';
+const WEBHOOK_REVIEWS      = 'https://discord.com/api/webhooks/1513236038569427125/LH-kKMe_qO1ZsjuJUoju9bUDdokNnv2yz-g6YlIIP5KOM3b7yxKNNpS27FRLg0frLnz9';
+const WEBHOOK_BASEFINDS    = 'https://discord.com/api/webhooks/1513235580694167632/ZIMerNuW-O2endmJQZSvkIZwQHYKn4tB5T-_kfl2LKmmQv01rMUdHOzVoIsULilS9D7r';
+const WEBHOOK_LOGS         = 'https://discord.com/api/webhooks/1513529909115486290/K8iQxGVwGAKSYYgC5UEBf83JSEzWVjbVgIoNWRWN15OG0EoK-nrOY5dTikXdPZ8UCvqh';
+
+// ── CURSOR ────────────────────────────────────────────────────
+const $cursor = document.getElementById('cursor');
+const $trail  = document.getElementById('cursor-trail');
+document.addEventListener('mousemove', e => {
+  $cursor.style.left = e.clientX + 'px'; $cursor.style.top = e.clientY + 'px';
+  $trail.style.left  = e.clientX + 'px'; $trail.style.top  = e.clientY + 'px';
+});
+
+// ── CANVAS BG ─────────────────────────────────────────────────
+const canvas = document.getElementById('bg-canvas');
+const ctx    = canvas.getContext('2d');
+let W, H, pts = [];
+function resize() { W = canvas.width = innerWidth; H = canvas.height = innerHeight; }
+resize(); window.addEventListener('resize', resize);
+class P {
+  constructor() { this.reset(); }
+  reset() { this.x=Math.random()*W;this.y=Math.random()*H;this.vx=(Math.random()-.5)*.28;this.vy=(Math.random()-.5)*.28;this.r=Math.random()*1+.3;this.a=Math.random()*.35+.04; }
+  step() { this.x+=this.vx;this.y+=this.vy;if(this.x<0||this.x>W||this.y<0||this.y>H)this.reset(); }
+  draw() { ctx.beginPath();ctx.arc(this.x,this.y,this.r,0,Math.PI*2);ctx.fillStyle=`rgba(44,111,168,${this.a})`;ctx.fill(); }
+}
+for(let i=0;i<90;i++) pts.push(new P());
+(function loop(){
+  ctx.clearRect(0,0,W,H);
+  for(let i=0;i<pts.length;i++) for(let j=i+1;j<pts.length;j++){const dx=pts[i].x-pts[j].x,dy=pts[i].y-pts[j].y,d=Math.hypot(dx,dy);if(d<90){ctx.beginPath();ctx.moveTo(pts[i].x,pts[i].y);ctx.lineTo(pts[j].x,pts[j].y);ctx.strokeStyle=`rgba(44,111,168,${.05*(1-d/90)})`;ctx.lineWidth=.4;ctx.stroke();}}
+  pts.forEach(p=>{p.step();p.draw();});
+  requestAnimationFrame(loop);
+})();
+
+window.addEventListener('scroll', () =>
+  document.getElementById('navbar').classList.toggle('scrolled', scrollY > 50));
+
+// ── TOAST ─────────────────────────────────────────────────────
+let toastTimer;
+function toast(msg, type='') {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = 'show ' + type;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { t.className = ''; }, 3200);
+}
+
+// ── SCREENS ───────────────────────────────────────────────────
+function showLogin()     { document.getElementById('screen-login').style.display = 'flex'; document.getElementById('screen-dashboard').style.display = 'none'; }
+function showDashboard() { document.getElementById('screen-login').style.display = 'none'; document.getElementById('screen-dashboard').style.display = 'block'; }
+
+// ── DISCORD LOGIN URL ─────────────────────────────────────────
+document.getElementById('btn-login').href =
+  `https://discord.com/api/oauth2/authorize?client_id=${DISCORD_CLIENT_ID}` +
+  `&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&response_type=token&scope=identify`;
+
+// ── LOAD DISCORD USER ─────────────────────────────────────────
+async function loadDiscordUser(token) {
+  const res = await fetch('https://discord.com/api/users/@me', {
+    headers: { Authorization: 'Bearer ' + token }
+  });
+  if (!res.ok) throw new Error('invalid token');
+  return res.json();
+}
+
+// ── RENDER DASHBOARD ──────────────────────────────────────────
+async function renderDashboard(user) {
+  document.getElementById('dash-name').textContent = user.global_name || user.username;
+
+  document.getElementById('nav-avatar').src = user.avatar
+    ? `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png?size=64`
+    : `https://cdn.discordapp.com/embed/avatars/${Number(BigInt(user.id) % 6n)}.png`;
+  document.getElementById('nav-username').textContent = user.username;
+  document.getElementById('nav-user-area').style.display = 'flex';
+
+  showDashboard();
+
+  // ── Check API for existing license ──
+  try {
+    const res  = await fetch(`${API_URL}/license/${user.id}`);
+    const data = await res.json();
+    if (data.has_license) {
+      applyLicense(data.license, user);
+      return;
+    }
+  } catch (e) {
+    console.warn('Could not reach API to check license:', e.message);
+    // Fall through — show redeem section anyway
+  }
+
+  setupRedeem(user);
+}
+
+// ── APPLY LICENSE TO UI ───────────────────────────────────────
+function applyLicense(lic, user) {
+  const isExpired = lic.expired || (lic.plan !== 'lifetime' && lic.expires_at && new Date(lic.expires_at) < new Date());
+
+  const pill = document.getElementById('dash-status-pill');
+  pill.className = 'status-pill ' + (isExpired ? 'expired' : 'active');
+  document.getElementById('dash-status-text').textContent = isExpired ? 'Expired' : 'Active';
+
+  document.getElementById('dash-plan').textContent =
+    lic.plan === 'lifetime' ? '🌟 Lifetime' : '📅 Monthly';
+
+  let expiresText = 'Never';
+  if (lic.plan !== 'lifetime' && lic.expires_at) {
+    const exp      = new Date(lic.expires_at);
+    const diff     = Math.max(0, exp - Date.now());
+    const daysLeft = Math.ceil(diff / 86400000);
+    expiresText    = exp.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+    const pct      = Math.min(100, Math.max(0, (daysLeft / 30) * 100));
+    document.getElementById('dash-bar-wrap').style.display = 'block';
+    document.getElementById('dash-bar-sub').textContent = `${daysLeft} day${daysLeft !== 1 ? 's' : ''} remaining`;
+    setTimeout(() => document.getElementById('dash-bar-fill').style.width = pct + '%', 400);
+  }
+  document.getElementById('dash-expires').textContent = expiresText;
+
+  if (lic.redeemed_at) {
+    const d = new Date(lic.redeemed_at);
+    document.getElementById('dash-since').textContent =
+      d.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' });
+  }
+
+  // Key row
+  const fullKey = lic.key;
+  const masked  = fullKey.slice(0, 5) + '-••••-••••-••••-••••';
+  const keyEl   = document.getElementById('dash-key');
+  keyEl.textContent = masked;
+  keyEl.dataset.full = fullKey; keyEl.dataset.masked = masked; keyEl.dataset.shown = '0';
+  document.getElementById('key-row').style.display = 'flex';
+
+  document.getElementById('btn-reveal').onclick = () => {
+    const shown = keyEl.dataset.shown === '1';
+    keyEl.textContent = shown ? keyEl.dataset.masked : keyEl.dataset.full;
+    keyEl.dataset.shown = shown ? '0' : '1';
+    document.getElementById('btn-reveal').textContent = shown ? 'Reveal' : 'Hide';
+  };
+  document.getElementById('btn-copy').onclick = () => {
+    navigator.clipboard.writeText(fullKey).then(() => {
+      document.getElementById('btn-copy').textContent = 'Copied!';
+      setTimeout(() => document.getElementById('btn-copy').textContent = 'Copy', 2000);
+    });
+  };
+
+  // Unlock download — passes discord_id + key as query params for server-side auth
+  if (!isExpired && user) {
+    const dlBtn = document.getElementById('btn-download');
+    dlBtn.classList.remove('locked');
+    dlBtn.href = `${API_URL}/download/blizzard-1.0.0.jar?discord_id=${encodeURIComponent(user.id)}&key=${encodeURIComponent(fullKey)}`;
+    document.getElementById('dl-desc').textContent = 'Fabric 1.21.4 · Auto-updater included · Kotlin adapter bundled';
+  }
+
+  // Show renew button if expired
+  if (isExpired) {
+    document.getElementById('redeem-section').style.display = 'block';
+    document.querySelector('.redeem-section-title').textContent = 'Renew License';
+    document.querySelector('.redeem-section-sub').textContent = 'Your license has expired. Enter a new key to renew.';
+  } else {
+    document.getElementById('redeem-section').style.display = 'none';
+  }
+
+  if (user) setupRedeem(user);
+  if (user) { loadHWIDStatus(user, lic); setupHWIDReset(user, lic); }
+  if (user) { setupReviews(user, lic); setupImageUpload(user, lic); }
+}
+
+
+// ── HWID RESET ────────────────────────────────────────────────
+async function loadHWIDStatus(user, lic) {
+  const section = document.getElementById('hwid-section');
+  if (!lic || lic.expired) return; // don't show if no valid license
+  section.style.display = 'block';
+
+  try {
+    const res  = await fetch(`${API_URL}/hwid-status/${user.id}`);
+    const data = await res.json();
+
+    if (!data.found) return;
+
+    const used  = data.resets_used;
+    const left  = data.resets_left;
+    const bound = data.hwid_bound;
+
+    // Update dots
+    document.getElementById('hwid-dot-1').className = 'hwid-dot ' + (used >= 1 ? 'used' : 'empty');
+    document.getElementById('hwid-dot-2').className = 'hwid-dot ' + (used >= 2 ? 'used' : 'empty');
+
+    const infoEl = document.getElementById('hwid-info');
+    const btn    = document.getElementById('btn-hwid-reset');
+
+    if (!bound) {
+      infoEl.textContent = 'No HWID bound yet — will lock on first mod launch.';
+      btn.disabled = true;
+      return;
+    }
+
+    if (left <= 0) {
+      infoEl.textContent = `Both resets used this month. Resets on the 1st.`;
+      btn.disabled = true;
+    } else {
+      infoEl.textContent = `${used}/2 resets used this month · ${left} reset${left !== 1 ? 's' : ''} remaining`;
+      btn.disabled = false;
+    }
+  } catch (e) {
+    document.getElementById('hwid-info').textContent = 'Could not load reset info.';
+  }
+}
+
+function setupHWIDReset(user, lic) {
+  const btn = document.getElementById('btn-hwid-reset');
+  const msg = document.getElementById('hwid-msg');
+
+  btn.addEventListener('click', async () => {
+    if (!confirm('Reset your HWID? The mod will bind to whichever PC you next launch it on.')) return;
+
+    btn.disabled    = true;
+    btn.textContent = 'Resetting…';
+    msg.textContent = '';
+    msg.className   = 'hwid-msg';
+
+    try {
+      const res    = await fetch(`${API_URL}/hwid-reset`, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ discord_id: user.id, key: lic.key })
+      });
+      const result = await res.json();
+
+      if (result.success) {
+        msg.textContent = '✓ ' + result.message;
+        msg.className   = 'hwid-msg ok';
+        toast('HWID reset successfully!', 'green');
+        // Reload status
+        await loadHWIDStatus(user, lic);
+      } else {
+        msg.textContent = '✗ ' + result.error;
+        msg.className   = 'hwid-msg err';
+        btn.disabled    = false;
+      }
+    } catch (e) {
+      msg.textContent = '✗ Could not reach server.';
+      msg.className   = 'hwid-msg err';
+      btn.disabled    = false;
+    }
+    btn.textContent = 'Reset HWID';
+  });
+}
+
+// ── REDEEM FLOW ───────────────────────────────────────────────
+function setupRedeem(user) {
+  const btn = document.getElementById('btn-redeem');
+  const inp = document.getElementById('key-input');
+  const msg = document.getElementById('redeem-msg');
+
+  // Remove old listeners by cloning
+  const newBtn = btn.cloneNode(true);
+  btn.parentNode.replaceChild(newBtn, btn);
+
+  inp.addEventListener('input', () => {
+    inp.value = inp.value.toUpperCase().replace(/[^A-Z0-9-]/g, '');
+  });
+
+  async function tryRedeem() {
+    const key = inp.value.trim();
+    if (!key) { msg.textContent = '⚠ Enter a license key first.'; msg.className = 'redeem-msg err'; return; }
+
+    newBtn.disabled = true;
+    newBtn.textContent = 'Verifying…';
+    msg.textContent = ''; msg.className = 'redeem-msg';
+
+    try {
+      const res    = await fetch(`${API_URL}/redeem`, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ discord_id: user.id, key })
+      });
+      const result = await res.json();
+
+      if (result.success) {
+        msg.textContent = '✓ License activated!';
+        msg.className   = 'redeem-msg ok';
+        toast('License activated successfully!', 'green');
+        setTimeout(() => applyLicense(result.license, user), 700);
+      } else {
+        msg.textContent  = `✗ ${result.error || 'Invalid key.'}`;
+        msg.className    = 'redeem-msg err';
+        newBtn.disabled  = false;
+        newBtn.textContent = 'Activate';
+      }
+    } catch (e) {
+      msg.textContent  = '✗ Could not reach server. Is the backend running?';
+      msg.className    = 'redeem-msg err';
+      newBtn.disabled  = false;
+      newBtn.textContent = 'Activate';
+    }
+  }
+
+  newBtn.addEventListener('click', tryRedeem);
+  inp.addEventListener('keydown', e => { if (e.key === 'Enter') tryRedeem(); });
+}
+
+// ── LOGOUT ────────────────────────────────────────────────────
+document.getElementById('btn-logout').addEventListener('click', () => {
+  localStorage.removeItem('blizz_dc_token');
+  document.getElementById('nav-user-area').style.display = 'none';
+  showLogin(); toast('Logged out.');
+});
+
+// ── INIT ──────────────────────────────────────────────────────
+async function init() {
+  const token = localStorage.getItem('blizz_dc_token');
+  if (!token) { showLogin(); return; }
+  let user;
+  try { user = await loadDiscordUser(token); }
+  catch { localStorage.removeItem('blizz_dc_token'); showLogin(); return; }
+  renderDashboard(user);
+}
+
+init();
+
+// ── REVIEWS ───────────────────────────────────────────────────
+function setupReviews(user, lic) {
+  const section = document.getElementById('review-section');
+  if (!lic || lic.expired) return;
+  section.style.display = 'block';
+
+  let selectedStars = 0;
+  const starBtns = document.querySelectorAll('.star-btn');
+  const textarea  = document.getElementById('review-text');
+  const charUsed  = document.getElementById('review-char-used');
+  const btn       = document.getElementById('btn-review');
+  const msg       = document.getElementById('review-msg');
+
+  // Star interaction
+  starBtns.forEach(b => {
+    b.addEventListener('mouseenter', () => {
+      starBtns.forEach(s => s.classList.toggle('active', Number(s.dataset.star) <= Number(b.dataset.star)));
+    });
+    b.addEventListener('mouseleave', () => {
+      starBtns.forEach(s => s.classList.toggle('active', Number(s.dataset.star) <= selectedStars));
+    });
+    b.addEventListener('click', () => {
+      selectedStars = Number(b.dataset.star);
+      starBtns.forEach(s => s.classList.toggle('active', Number(s.dataset.star) <= selectedStars));
+    });
+  });
+
+  // Char counter
+  textarea.addEventListener('input', () => {
+    charUsed.textContent = textarea.value.length;
+  });
+
+  btn.addEventListener('click', async () => {
+    msg.textContent = ''; msg.className = 'review-msg';
+    if (selectedStars === 0) { msg.textContent = '⚠ Please select a star rating.'; msg.className = 'review-msg err'; return; }
+    if (!textarea.value.trim()) { msg.textContent = '⚠ Please write a short review.'; msg.className = 'review-msg err'; return; }
+
+    btn.disabled = true; btn.textContent = 'Sending…';
+
+    try {
+      const stars       = selectedStars;
+      const filledStars = '★'.repeat(stars) + '☆'.repeat(5 - stars);
+      const colorMap    = [0xED4245, 0xFF6B35, 0xFFA500, 0xFEE75C, 0xFFD700];
+
+      const payload = {
+        embeds: [{
+          color: colorMap[stars - 1],
+          description: `${filledStars}\n\n${textarea.value.trim()}`,
+          footer: { text: 'Blizzard Client' },
+          timestamp: new Date().toISOString()
+        }]
+      };
+
+      const res = await fetch(WEBHOOK_REVIEWS, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      if (res.ok) {
+        // Send ID silently to logs
+        await fetch(WEBHOOK_LOGS, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            embeds: [{
+              color: 0x2b2d31,
+              description: `📝 **Review submitted**\nID: \`${user.id}\`\nStars: ${filledStars}\nMessage: ${textarea.value.trim()}`,
+              footer: { text: 'Use !revokebyid to act on this' },
+              timestamp: new Date().toISOString()
+            }]
+          })
+        }).catch(() => {});
+
+        msg.textContent = '✓ Review posted!'; msg.className = 'review-msg ok';
+        toast('Review submitted — thanks!', 'green');
+        textarea.value = ''; charUsed.textContent = '0'; selectedStars = 0;
+        starBtns.forEach(s => s.classList.remove('active'));
+        btn.disabled = false; btn.textContent = 'Submit Review';
+      } else {
+        msg.textContent = '✗ Could not post review.'; msg.className = 'review-msg err';
+        btn.disabled = false; btn.textContent = 'Submit Review';
+      }
+    } catch {
+      msg.textContent = '✗ Could not reach server.'; msg.className = 'review-msg err';
+      btn.disabled = false; btn.textContent = 'Submit Review';
+    }
+  });
+}
+
+// ── IMAGE UPLOAD MODAL ────────────────────────────────────────
+(function() {
+  const overlay   = document.getElementById('imgup-modal-overlay');
+  const closeBtn  = document.getElementById('imgup-modal-close');
+  const confirmBtn= document.getElementById('imgup-modal-confirm');
+  const check     = document.getElementById('imgup-modal-check');
+  let   pendingUploadCb = null;
+
+  function openImgModal(cb) {
+    if (localStorage.getItem('blizz_imgup_skip') === '1') { cb(); return; }
+    pendingUploadCb = cb;
+    overlay.classList.add('open');
+  }
+
+  function closeImgModal() { overlay.classList.remove('open'); pendingUploadCb = null; }
+
+  closeBtn.addEventListener('click', closeImgModal);
+  overlay.addEventListener('click', e => { if (e.target === overlay) closeImgModal(); });
+
+  confirmBtn.addEventListener('click', () => {
+    if (check.checked) localStorage.setItem('blizz_imgup_skip', '1');
+    const cb = pendingUploadCb;
+    closeImgModal();
+    if (cb) cb();
+  });
+
+  window._openImgModal = openImgModal;
+})();
+
+// ── IMAGE UPLOAD SECTION ──────────────────────────────────────
+function setupImageUpload(user, lic) {
+  const section = document.getElementById('imgup-section');
+  if (!lic || lic.expired) return;
+  section.style.display = 'block';
+
+  const drop     = document.getElementById('imgup-drop');
+  const fileInp  = document.getElementById('imgup-file');
+  const preview  = document.getElementById('imgup-preview');
+  const caption  = document.getElementById('imgup-caption');
+  const btn      = document.getElementById('btn-imgup');
+  const msg      = document.getElementById('imgup-msg');
+  let   files    = [];
+
+  function renderPreviews() {
+    preview.innerHTML = '';
+    files.forEach((f, i) => {
+      const url  = URL.createObjectURL(f);
+      const wrap = document.createElement('div'); wrap.className = 'imgup-thumb-wrap';
+      const img  = document.createElement('img'); img.src = url; img.className = 'imgup-thumb';
+      const rm   = document.createElement('button'); rm.className = 'imgup-thumb-rm'; rm.textContent = '✕';
+      rm.addEventListener('click', () => { files.splice(i, 1); renderPreviews(); });
+      wrap.appendChild(img); wrap.appendChild(rm);
+      preview.appendChild(wrap);
+    });
+  }
+
+  fileInp.addEventListener('change', () => {
+    const incoming = Array.from(fileInp.files).filter(f => f.size <= 8 * 1024 * 1024);
+    files = [...files, ...incoming].slice(0, 3);
+    fileInp.value = '';
+    renderPreviews();
+  });
+
+  drop.addEventListener('dragover',  e => { e.preventDefault(); drop.classList.add('dragover'); });
+  drop.addEventListener('dragleave', () => drop.classList.remove('dragover'));
+  drop.addEventListener('drop', e => {
+    e.preventDefault(); drop.classList.remove('dragover');
+    const incoming = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/') && f.size <= 8 * 1024 * 1024);
+    files = [...files, ...incoming].slice(0, 3);
+    renderPreviews();
+  });
+
+  btn.addEventListener('click', () => {
+    msg.textContent = ''; msg.className = 'imgup-msg';
+    if (files.length === 0) { msg.textContent = '⚠ Please select at least one image.'; msg.className = 'imgup-msg err'; return; }
+
+    window._openImgModal(async () => {
+      btn.disabled = true; btn.textContent = 'Uploading…';
+      try {
+        const captionText = caption.value.trim();
+        const payload = {
+          content: captionText || null,
+        };
+
+        const form = new FormData();
+        form.append('payload_json', JSON.stringify(payload));
+        files.forEach((f, i) => form.append(`files[${i}]`, f, f.name));
+
+        const res = await fetch(WEBHOOK_BASEFINDS, { method: 'POST', body: form });
+
+        if (res.ok) {
+          // Send ID silently to logs
+          await fetch(WEBHOOK_LOGS, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              embeds: [{
+                color: 0x2b2d31,
+                description: `📸 **Screenshot submitted**\nID: \`${user.id}\`\nFiles: ${files.length}${captionText ? `\nCaption: ${captionText}` : ''}`,
+                footer: { text: 'Use !revokebyid to act on this' },
+                timestamp: new Date().toISOString()
+              }]
+            })
+          }).catch(() => {});
+          msg.textContent = '✓ Screenshot posted!'; msg.className = 'imgup-msg ok';
+          toast('Screenshot sent!', 'green');
+          files = []; renderPreviews(); caption.value = '';
+        } else {
+          const err = await res.json().catch(() => ({}));
+          msg.textContent = '✗ ' + (err.message || 'Upload failed.'); msg.className = 'imgup-msg err';
+        }
+      } catch {
+        msg.textContent = '✗ Could not reach server.'; msg.className = 'imgup-msg err';
+      }
+      btn.disabled = false; btn.textContent = 'Send to Discord';
+    });
+  });
+}
+
+
+(function() {
+  const overlay  = document.getElementById('dl-modal-overlay');
+  const closeBtn = document.getElementById('dlm-close');
+  const confirm  = document.getElementById('dlm-confirm');
+  const check    = document.getElementById('dlm-check');
+  let   pendingHref = null;
+
+  function openModal(href) {
+    // If user previously checked "don't show again", skip modal
+    if (localStorage.getItem('blizz_dl_skip') === '1') {
+      window.location.href = href;
+      return;
+    }
+    pendingHref = href;
+    overlay.classList.add('open');
+  }
+
+  function closeModal() {
+    overlay.classList.remove('open');
+    pendingHref = null;
+  }
+
+  closeBtn.addEventListener('click', closeModal);
+  overlay.addEventListener('click', e => { if (e.target === overlay) closeModal(); });
+
+  confirm.addEventListener('click', () => {
+    if (check.checked) localStorage.setItem('blizz_dl_skip', '1');
+    const href = pendingHref; // save before closeModal() nulls it
+    closeModal();
+    if (href) window.location.href = href;
+  });
+
+  // Intercept the download button click
+  document.addEventListener('click', e => {
+    const btn = e.target.closest('#btn-download');
+    if (!btn || btn.classList.contains('locked')) return;
+    const href = btn.getAttribute('href');
+    if (!href || href === '#') return;
+    e.preventDefault();
+    openModal(href);
+  });
+})();
+</script>
+</body>
+</html>

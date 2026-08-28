@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html>
+<head><title>Authenticating…</title></head>
+<body>
+<script>
+  const hash = new URLSearchParams(location.hash.replace(/^#/, ''));
+  const token = hash.get('access_token');
+  if (token) {
+    localStorage.setItem('blizz_dc_token', token);
+  }
+  window.location.replace('https://blizzardweb.exasty.workers.dev/dashboard');
+</script>
+</body>
+</html>
