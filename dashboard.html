@@ -89,6 +89,40 @@ nav.scrolled { padding: 14px 48px; }
 .hex { width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .hex svg { width: 100%; height: 100%; }
 .nav-right { display: flex; align-items: center; gap: 14px; }
+
+.burger-wrap { position: relative; }
+.btn-burger {
+  width: 36px; height: 36px; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  background: transparent; border: 1px solid var(--border);
+  color: var(--dim); cursor: pointer;
+  transition: border-color .2s, color .2s, background .2s;
+}
+.btn-burger svg { width: 16px; height: 16px; }
+.btn-burger:hover, .btn-burger.open { border-color: var(--frost); color: var(--frost); background: var(--ghost-mid); }
+.burger-menu {
+  position: absolute; top: calc(100% + 10px); left: 0;
+  min-width: 190px; border-radius: var(--radius-sm);
+  background: var(--panel); border: 1px solid var(--border-bright);
+  box-shadow: 0 20px 45px -15px rgba(11,20,32,.3);
+  opacity: 0; visibility: hidden; transform: translateY(-6px);
+  transition: opacity .18s, transform .18s, visibility .18s;
+  z-index: 200;
+  padding: 6px;
+}
+.burger-menu.open { opacity: 1; visibility: visible; transform: translateY(0); }
+.menu-item {
+  display: flex; align-items: center; gap: 10px;
+  width: 100%; background: none; border: none; text-align: left;
+  border-radius: 8px;
+  color: var(--dim); padding: 10px 12px;
+  font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 600;
+  letter-spacing: .04em; text-transform: uppercase;
+  cursor: pointer; transition: background .15s, color .15s;
+}
+.menu-item svg { width: 15px; height: 15px; flex-shrink: 0; }
+.menu-item:hover { background: var(--ghost); color: var(--ink); }
+.menu-item.active { color: var(--frost); background: rgba(44,111,168,.08); }
 .nav-avatar { width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--border-bright); }
 .nav-username { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--dim); letter-spacing: .06em; }
 .btn-ghost {
@@ -151,23 +185,29 @@ main { padding: 110px 48px 80px; max-width: 1060px; margin: 0 auto; }
 .dash-title em { font-family: 'Instrument Serif', serif; font-style: italic; font-weight: 400; color: var(--frost); }
 
 .status-row {
-  display: grid; grid-template-columns: repeat(4,1fr); gap: 0;
-  border: 1px solid var(--border); background: var(--panel);
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px;
+  margin-bottom: 20px;
+}
+.stat-cell {
+  padding: 22px 24px; position: relative;
+  background: var(--panel);
+  border: 1px solid var(--border);
   border-radius: var(--radius);
-  margin-bottom: 20px; overflow: hidden;
-  box-shadow: 0 20px 50px -30px rgba(11,20,32,.15);
+  box-shadow: 0 12px 28px -22px rgba(11,20,32,.25);
+  transition: border-color .2s, box-shadow .2s, transform .2s;
 }
-.stat-cell { padding: 28px 32px; border-right: 1px solid var(--border); position: relative; }
-.stat-cell:last-child { border-right: none; }
-.stat-cell::before {
-  content:''; position:absolute; inset:0;
-  background: linear-gradient(135deg, rgba(44,111,168,.035) 0%, transparent 60%);
-  pointer-events:none;
+.stat-cell:hover { border-color: var(--border-bright); box-shadow: 0 16px 34px -20px rgba(11,20,32,.3); transform: translateY(-1px); }
+.stat-icon {
+  width: 30px; height: 30px; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--ghost-mid); color: var(--frost);
+  margin-bottom: 16px;
 }
-.stat-label { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--dim); letter-spacing: .18em; text-transform: uppercase; margin-bottom: 10px; }
-.stat-val { font-family: 'Space Grotesk'; font-size: 18px; font-weight: 700; letter-spacing: -.01em; line-height: 1; }
+.stat-icon svg { width: 15px; height: 15px; }
+.stat-label { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--dim); letter-spacing: .16em; text-transform: uppercase; margin-bottom: 9px; }
+.stat-val { font-family: 'Space Grotesk'; font-size: 17px; font-weight: 700; letter-spacing: -.01em; line-height: 1; }
 
-.status-pill { display: inline-flex; align-items: center; gap: 7px; padding: 6px 12px; font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: .1em; text-transform: uppercase; }
+.status-pill { display: inline-flex; align-items: center; gap: 7px; padding: 6px 12px; border-radius: 999px; font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: .1em; text-transform: uppercase; }
 .status-pill.none    { background: rgba(180,83,9,.08); border: 1px solid rgba(180,83,9,.28); color: var(--yellow); }
 .status-pill.active  { background: rgba(22,163,74,.1);  border: 1px solid rgba(22,163,74,.28); color: var(--green); }
 .status-pill.expired { background: rgba(220,38,38,.1); border: 1px solid rgba(220,38,38,.28); color: var(--red); }
@@ -194,75 +234,35 @@ main { padding: 110px 48px 80px; max-width: 1060px; margin: 0 auto; }
 .key-btn { background:transparent; border:1px solid var(--border); color:var(--dim); padding:7px 14px; font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.08em; text-transform:uppercase; cursor:pointer; transition:all .2s; }
 .key-btn:hover { border-color:var(--frost); color:var(--frost); }
 
-/* ── DASHBOARD OPTIONS ──────────────────────────────────────
-   Reworked from a flat 2x2 grid into a hierarchy: one large
-   "primary action" card for the download, and a row of three
-   compact option tiles underneath — each with its own accent
-   color so they read as distinct destinations, not repeats
-   of the same card. */
-.options { display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px; }
-
-.opt-primary {
-  border: 1px solid var(--border); background: var(--panel);
-  border-radius: var(--radius);
-  padding: 32px 36px;
-  display: flex; align-items: center; justify-content: space-between; gap: 24px;
-  flex-wrap: wrap;
-  position: relative; overflow: hidden;
-  box-shadow: 0 20px 50px -30px rgba(11,20,32,.15);
+.cards { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 20px; }
+.card {
+  background: var(--panel); padding: 30px 28px; position: relative; overflow: hidden;
+  border: 1px solid var(--border); border-radius: var(--radius);
+  box-shadow: 0 12px 28px -22px rgba(11,20,32,.25);
+  transition: border-color .2s, box-shadow .25s, transform .2s;
 }
-.opt-primary::before {
-  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
-  background: linear-gradient(90deg, var(--frost), var(--frost-bright));
-}
-.opt-primary-left { display: flex; align-items: center; gap: 20px; min-width: 0; }
-.opt-primary-icon {
-  width: 52px; height: 52px; flex-shrink: 0; border-radius: 14px;
-  display: flex; align-items: center; justify-content: center;
-  background: linear-gradient(145deg, var(--frost), var(--frost-bright));
-  color: #fff; box-shadow: 0 10px 24px -8px rgba(44,111,168,.5);
-}
-.opt-primary-icon svg { width: 22px; height: 22px; }
-.opt-primary-tag { font-family:'JetBrains Mono',monospace; font-size:9px; color:var(--dim); letter-spacing:.16em; text-transform:uppercase; margin-bottom:4px; display:block; }
-.opt-primary-title { font-family: 'Space Grotesk'; font-size:21px; font-weight:700; letter-spacing:-.01em; margin-bottom:4px; }
-.opt-primary-desc { font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--dim); line-height:1.6; }
-
-.tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
-.tile {
-  border: 1px solid var(--border); background: var(--panel);
-  border-radius: var(--radius);
-  padding: 24px 22px;
-  position: relative; overflow: hidden;
-  transition: border-color .2s, transform .15s, box-shadow .2s;
-}
-.tile:hover { transform: translateY(-2px); box-shadow: 0 16px 32px -18px rgba(11,20,32,.2); }
-.tile-icon {
-  width: 34px; height: 34px; border-radius: 9px; display: flex; align-items: center; justify-content: center;
-  margin-bottom: 14px;
-}
-.tile-icon svg { width: 15px; height: 15px; }
-.tile.discord .tile-icon { background: rgba(88,101,242,.1); color: var(--blue); }
-.tile.discord:hover { border-color: rgba(88,101,242,.35); }
-.tile.docs .tile-icon { background: rgba(11,20,32,.06); color: var(--ink); }
-.tile.docs:hover { border-color: var(--border-bright); }
-.tile.billing .tile-icon { background: rgba(22,163,74,.1); color: var(--green); }
-.tile.billing:hover { border-color: rgba(22,163,74,.35); }
-.tile-tag { font-family:'JetBrains Mono',monospace; font-size:9px; color:var(--dim); letter-spacing:.16em; text-transform:uppercase; margin-bottom:6px; display:block; }
-.tile-title { font-family: 'Space Grotesk'; font-size:16px; font-weight:700; letter-spacing:-.01em; margin-bottom:7px; }
-.tile-desc { font-family:'JetBrains Mono',monospace; font-size:11.5px; color:var(--dim); line-height:1.6; margin-bottom:14px; min-height:34px; }
-.tile-cta {
-  display: inline-flex; align-items: center; gap: 6px;
+.card:hover { border-color: var(--border-bright); box-shadow: 0 18px 38px -20px rgba(11,20,32,.32); transform: translateY(-2px); }
+.card-icon { width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; background: var(--ghost-mid); margin-bottom: 18px; color: var(--frost); }
+.card-icon svg { width: 18px; height: 18px; }
+.card-tag { font-family:'JetBrains Mono',monospace; font-size:9px; color:var(--dim); letter-spacing:.16em; text-transform:uppercase; margin-bottom:6px; display:block; }
+.card-title { font-family: 'Space Grotesk'; font-size:18px; font-weight:700; letter-spacing:-.01em; margin-bottom:8px; }
+.card-desc { font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--dim); line-height:1.65; }
+.card.featured { background: linear-gradient(165deg, rgba(44,111,168,.06) 0%, var(--panel) 55%); border-color: rgba(44,111,168,.3); }
+.card.featured .card-icon { background: rgba(44,111,168,.12); }
+.card.featured::after { content:''; position:absolute; top:0; left:0; right:0; height:2px; background: linear-gradient(90deg,transparent,var(--frost-bright),transparent); }
+.card-cta {
+  display: inline-flex; align-items: center; gap: 7px; margin-top: 18px;
   font-size: 12px; font-weight: 600; text-decoration: none; color: var(--ink);
-  transition: gap .2s, color .2s;
+  border-bottom: 1px solid var(--border); padding-bottom: 2px;
+  transition: border-color .2s; position: relative; z-index: 1; cursor: pointer;
+  background: none; border-left: none; border-top: none; border-right: none;
+  font-family: 'Inter', sans-serif; letter-spacing: .04em;
 }
-.tile.discord .tile-cta:hover { color: var(--blue); gap: 9px; }
-.tile.docs .tile-cta:hover { color: var(--frost); gap: 9px; }
-.tile.billing .tile-cta:hover { color: var(--green); gap: 9px; }
-
+.card-cta:hover { border-bottom-color: var(--frost); color: var(--frost); }
 .btn-dl {
-  display: inline-flex; align-items: center; gap: 10px; flex-shrink: 0;
+  display: inline-flex; align-items: center; gap: 10px; margin-top: 18px;
   background: var(--ink); color: #fff; border: none;
-  padding: 14px 30px;
+  padding: 12px 28px;
   font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 700;
   letter-spacing: .05em; text-transform: uppercase;
   cursor: pointer; text-decoration: none;
@@ -279,12 +279,6 @@ main { padding: 110px 48px 80px; max-width: 1060px; margin: 0 auto; }
 .btn-dl:hover::after { transform:translateX(100%); }
 .btn-dl.locked { opacity: .35; cursor: not-allowed; }
 .btn-dl.locked:hover { transform: none; }
-
-@media(max-width:720px){
-  .tiles { grid-template-columns: 1fr; }
-  .opt-primary { flex-direction: column; align-items: flex-start; }
-  .btn-dl { width: 100%; justify-content: center; }
-}
 
 .redeem-section { border: 1px solid var(--border); background: var(--panel); border-radius: var(--radius); padding: 36px; margin-bottom: 20px; }
 .redeem-section-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 24px; gap: 20px; }
@@ -333,7 +327,8 @@ footer { border-top: 1px solid var(--border); padding: 40px 48px; display:flex; 
 @media(max-width:860px){
   nav { padding:16px 20px; }
   main { padding:90px 20px 60px; }
-  .status-row { grid-template-columns:1fr 1fr; }
+  .status-row { grid-template-columns:1fr 1fr; gap: 10px; }
+  .cards { grid-template-columns:1fr; gap: 10px; }
   footer { padding:28px 20px; flex-direction:column; text-align:center; }
   .stat-cell { padding:20px; }
   .redeem-section { padding:24px; }
@@ -372,6 +367,20 @@ footer { border-top: 1px solid var(--border); padding: 40px 48px; display:flex; 
 .hwid-msg { font-family: 'JetBrains Mono', monospace; font-size: 12px; letter-spacing: .06em; margin-top: 12px; min-height: 18px; }
 .hwid-msg.ok  { color: var(--green); }
 .hwid-msg.err { color: var(--red); }
+
+/* ── LOCKED NOTICE (shown in Reviews/Clips tabs w/o an active license) ── */
+.locked-notice {
+  border: 1px dashed var(--border-bright); background: var(--panel);
+  border-radius: var(--radius); padding: 44px 24px; text-align: center; margin-bottom: 20px;
+}
+.locked-notice-icon {
+  width: 44px; height: 44px; margin: 0 auto 16px; border-radius: 10px;
+  border: 1px solid var(--border-bright); background: var(--ghost-mid);
+  display: flex; align-items: center; justify-content: center; color: var(--frost);
+}
+.locked-notice-icon svg { width: 20px; height: 20px; }
+.locked-notice-title { font-family: 'Space Grotesk'; font-size: 16px; font-weight: 700; letter-spacing: -.01em; margin-bottom: 6px; }
+.locked-notice-sub { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--dim); letter-spacing: .04em; }
 
 /* ── REVIEW SECTION ── */
 .review-section {
@@ -762,6 +771,25 @@ footer { border-top: 1px solid var(--border); padding: 40px 48px; display:flex; 
       <div class="hex"><svg viewBox="0 0 24 24" fill="none"><path d="M12 2v20M4 7l16 10M20 7L4 17" stroke="#2C6FA8" stroke-width="2" stroke-linecap="round"/></svg></div>BLIZZARD
     </a>
     <div class="nav-right" id="nav-user-area" style="display:none">
+      <div class="burger-wrap">
+        <button class="btn-burger" id="btn-burger" aria-label="Menu" aria-expanded="false">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
+        <div class="burger-menu" id="burger-menu">
+          <button class="menu-item active" data-tab="dashboard">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>
+            Dashboard
+          </button>
+          <button class="menu-item" data-tab="reviews">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 17.3l-5.4 3 1-6-4.6-4.2 6.1-.6L12 3.5l2.9 5.9 6.1.6-4.6 4.2 1 6z"/></svg>
+            Reviews
+          </button>
+          <button class="menu-item" data-tab="clips">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+            Clips
+          </button>
+        </div>
+      </div>
       <img class="nav-avatar" id="nav-avatar" src="" alt="">
       <span class="nav-username" id="nav-username"></span>
       <button class="btn-ghost" id="btn-logout">Log out</button>
@@ -782,6 +810,9 @@ footer { border-top: 1px solid var(--border); padding: 40px 48px; display:flex; 
 
     <!-- DASHBOARD -->
     <div class="dashboard" id="screen-dashboard" style="display:none">
+
+    <!-- TAB: DASHBOARD -->
+    <div class="tab-panel" id="tab-dashboard">
       <div class="dash-header">
         <div class="dash-eyebrow">Welcome back</div>
         <h1 class="dash-title">Hey, <em id="dash-name">Player</em> 👋</h1>
@@ -789,6 +820,7 @@ footer { border-top: 1px solid var(--border); padding: 40px 48px; display:flex; 
 
       <div class="status-row">
         <div class="stat-cell">
+          <div class="stat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2 3 6v6c0 5 3.8 9.4 9 10 5.2-.6 9-5 9-10V6z"/></svg></div>
           <div class="stat-label">License Status</div>
           <div id="dash-status-pill" class="status-pill none">
             <span class="pill-dot"></span>
@@ -796,10 +828,12 @@ footer { border-top: 1px solid var(--border); padding: 40px 48px; display:flex; 
           </div>
         </div>
         <div class="stat-cell">
+          <div class="stat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2 2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg></div>
           <div class="stat-label">Plan</div>
           <div class="stat-val" id="dash-plan">—</div>
         </div>
         <div class="stat-cell">
+          <div class="stat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg></div>
           <div class="stat-label">Expires</div>
           <div class="stat-val" id="dash-expires">—</div>
           <div class="bar-wrap" id="dash-bar-wrap" style="display:none">
@@ -808,6 +842,7 @@ footer { border-top: 1px solid var(--border); padding: 40px 48px; display:flex; 
           </div>
         </div>
         <div class="stat-cell">
+          <div class="stat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg></div>
           <div class="stat-label">Member Since</div>
           <div class="stat-val" id="dash-since">—</div>
         </div>
@@ -824,64 +859,48 @@ footer { border-top: 1px solid var(--border); padding: 40px 48px; display:flex; 
         </div>
       </div>
 
-      <!-- DASHBOARD OPTIONS: one primary action + three secondary tiles -->
-      <div class="options">
-        <div class="opt-primary">
-          <div class="opt-primary-left">
-            <div class="opt-primary-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-            </div>
-            <div>
-              <span class="opt-primary-tag">Latest Build</span>
-              <div class="opt-primary-title">Download Blizzard</div>
-              <div class="opt-primary-desc" id="dl-desc">Activate a license below to unlock your download.</div>
-            </div>
+      <div class="cards">
+        <div class="card featured">
+          <div class="card-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
           </div>
+          <span class="card-tag">Latest Build</span>
+          <div class="card-title">Download Blizzard</div>
+          <div class="card-desc" id="dl-desc">Activate a license below to unlock your download.</div>
           <a class="btn-dl locked" id="btn-download">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
             Download .jar
           </a>
         </div>
-
-        <div class="tiles">
-          <div class="tile discord">
-            <div class="tile-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-            </div>
-            <span class="tile-tag">Support</span>
-            <div class="tile-title">Discord Server</div>
-            <div class="tile-desc">Open a ticket and get help from our team in under 24 hours.</div>
-            <a class="tile-cta" href="https://discord.gg/your-invite" target="_blank">
-              Join Server
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-            </a>
+        <div class="card">
+          <div class="card-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
           </div>
-
-          <div class="tile docs">
-            <div class="tile-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-            </div>
-            <span class="tile-tag">Reference</span>
-            <div class="tile-title">Documentation</div>
-            <div class="tile-desc">Setup guide, module list, keybind reference, and FAQ.</div>
-            <a class="tile-cta" href="#" target="_blank">
-              Read Docs
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-            </a>
+          <span class="card-tag">Support</span>
+          <div class="card-title">Discord Server</div>
+          <div class="card-desc">Open a ticket and get help from our team in under 24 hours.</div>
+          <a class="card-cta" href="https://discord.gg/your-invite" target="_blank">
+            Join Server
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          </a>
+        </div>
+        <div class="card">
+          <div class="card-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
           </div>
-
-          <div class="tile billing">
-            <div class="tile-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
-            </div>
-            <span class="tile-tag">Billing</span>
-            <div class="tile-title">Manage Account</div>
-            <div class="tile-desc">Renewal options, invoice history, and subscription settings.</div>
-            <a class="tile-cta" href="https://sellauth.com" target="_blank">
-              Open Billing
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-            </a>
+          <span class="card-tag">Reference</span>
+          <div class="card-title">Documentation</div>
+          <div class="card-desc">Setup guide, module list, keybind reference, and FAQ.</div>
+          <a class="card-cta" href="#" target="_blank">Read Docs <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg></a>
+        </div>
+        <div class="card">
+          <div class="card-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
           </div>
+          <span class="card-tag">Billing</span>
+          <div class="card-title">Manage Account</div>
+          <div class="card-desc">Renewal options, invoice history, and subscription settings.</div>
+          <a class="card-cta" href="https://sellauth.com" target="_blank">Open Billing <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg></a>
         </div>
       </div>
 
@@ -916,6 +935,23 @@ footer { border-top: 1px solid var(--border); padding: 40px 48px; display:flex; 
         <button class="btn-hwid-reset" id="btn-hwid-reset" disabled>Reset HWID</button>
         <div class="hwid-msg" id="hwid-msg"></div>
       </div>
+    </div>
+    <!-- /TAB: DASHBOARD -->
+
+    <!-- TAB: REVIEWS -->
+    <div class="tab-panel" id="tab-reviews" style="display:none">
+      <div class="dash-header">
+        <div class="dash-eyebrow">Community</div>
+        <h1 class="dash-title">Leave a <em>Review</em></h1>
+      </div>
+
+      <div class="locked-notice" id="reviews-locked-notice">
+        <div class="locked-notice-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        </div>
+        <div class="locked-notice-title">License required</div>
+        <div class="locked-notice-sub">Activate a license to leave a review.</div>
+      </div>
 
       <!-- REVIEW SECTION -->
       <div class="review-section" id="review-section">
@@ -932,6 +968,23 @@ footer { border-top: 1px solid var(--border); padding: 40px 48px; display:flex; 
         <div class="review-char-count"><span id="review-char-used">0</span>/500</div>
         <button class="btn-review" id="btn-review">Submit Review</button>
         <div class="review-msg" id="review-msg"></div>
+      </div>
+    </div>
+    <!-- /TAB: REVIEWS -->
+
+    <!-- TAB: CLIPS -->
+    <div class="tab-panel" id="tab-clips" style="display:none">
+      <div class="dash-header">
+        <div class="dash-eyebrow">Showcase</div>
+        <h1 class="dash-title">Share a <em>Clip</em></h1>
+      </div>
+
+      <div class="locked-notice" id="clips-locked-notice">
+        <div class="locked-notice-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        </div>
+        <div class="locked-notice-title">License required</div>
+        <div class="locked-notice-sub">Activate a license to share screenshots and clips.</div>
       </div>
 
       <!-- IMAGE UPLOAD SECTION -->
@@ -953,6 +1006,8 @@ footer { border-top: 1px solid var(--border); padding: 40px 48px; display:flex; 
         <button class="btn-imgup" id="btn-imgup">Send to Discord</button>
         <div class="imgup-msg" id="imgup-msg"></div>
       </div>
+    </div>
+    <!-- /TAB: CLIPS -->
 
     </div>
   </main>
@@ -967,7 +1022,7 @@ footer { border-top: 1px solid var(--border); padding: 40px 48px; display:flex; 
 // ── CONFIG ────────────────────────────────────────────────────
 const DISCORD_CLIENT_ID = '1511344894290170046';
 const REDIRECT_URI      = 'https://blizzardweb.exasty.workers.dev/callback';
-const API_URL              = 'https://blizzard-server-production-98aa.up.railway.app';
+const API_URL              = 'https://blizzardapi.exasty.workers.dev';
 const WEBHOOK_REVIEWS      = 'https://discord.com/api/webhooks/1513236038569427125/LH-kKMe_qO1ZsjuJUoju9bUDdokNnv2yz-g6YlIIP5KOM3b7yxKNNpS27FRLg0frLnz9';
 const WEBHOOK_BASEFINDS    = 'https://discord.com/api/webhooks/1513235580694167632/ZIMerNuW-O2endmJQZSvkIZwQHYKn4tB5T-_kfl2LKmmQv01rMUdHOzVoIsULilS9D7r';
 const WEBHOOK_LOGS         = 'https://discord.com/api/webhooks/1513529909115486290/K8iQxGVwGAKSYYgC5UEBf83JSEzWVjbVgIoNWRWN15OG0EoK-nrOY5dTikXdPZ8UCvqh';
@@ -1016,6 +1071,37 @@ function toast(msg, type='') {
 function showLogin()     { document.getElementById('screen-login').style.display = 'flex'; document.getElementById('screen-dashboard').style.display = 'none'; }
 function showDashboard() { document.getElementById('screen-login').style.display = 'none'; document.getElementById('screen-dashboard').style.display = 'block'; }
 
+// ── BURGER MENU / TABS ───────────────────────────────────────
+const TABS = ['dashboard', 'reviews', 'clips'];
+
+function switchTab(tab) {
+  TABS.forEach(t => {
+    document.getElementById('tab-' + t).style.display = (t === tab) ? 'block' : 'none';
+  });
+  document.querySelectorAll('.menu-item').forEach(el =>
+    el.classList.toggle('active', el.dataset.tab === tab)
+  );
+  closeBurger();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function openBurger()  { document.getElementById('burger-menu').classList.add('open');  document.getElementById('btn-burger').classList.add('open');  document.getElementById('btn-burger').setAttribute('aria-expanded', 'true'); }
+function closeBurger() { document.getElementById('burger-menu').classList.remove('open'); document.getElementById('btn-burger').classList.remove('open'); document.getElementById('btn-burger').setAttribute('aria-expanded', 'false'); }
+function toggleBurger() { document.getElementById('burger-menu').classList.contains('open') ? closeBurger() : openBurger(); }
+
+document.getElementById('btn-burger').addEventListener('click', (e) => {
+  e.stopPropagation();
+  toggleBurger();
+});
+document.querySelectorAll('.menu-item').forEach(btn => {
+  btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+});
+document.addEventListener('click', (e) => {
+  const wrap = document.querySelector('.burger-wrap');
+  if (wrap && !wrap.contains(e.target)) closeBurger();
+});
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeBurger(); });
+
 // ── DISCORD LOGIN URL ─────────────────────────────────────────
 document.getElementById('btn-login').href =
   `https://discord.com/api/oauth2/authorize?client_id=${DISCORD_CLIENT_ID}` +
@@ -1039,6 +1125,8 @@ async function renderDashboard(user) {
     : `https://cdn.discordapp.com/embed/avatars/${Number(BigInt(user.id) % 6n)}.png`;
   document.getElementById('nav-username').textContent = user.username;
   document.getElementById('nav-user-area').style.display = 'flex';
+  document.getElementById('btn-burger').style.display = 'flex';
+  switchTab('dashboard');
 
   showDashboard();
 
@@ -1270,6 +1358,9 @@ function setupRedeem(user) {
 document.getElementById('btn-logout').addEventListener('click', () => {
   localStorage.removeItem('blizz_dc_token');
   document.getElementById('nav-user-area').style.display = 'none';
+  document.getElementById('btn-burger').style.display = 'none';
+  closeBurger();
+  switchTab('dashboard');
   showLogin(); toast('Logged out.');
 });
 
@@ -1290,6 +1381,7 @@ function setupReviews(user, lic) {
   const section = document.getElementById('review-section');
   if (!lic || lic.expired) return;
   section.style.display = 'block';
+  document.getElementById('reviews-locked-notice').style.display = 'none';
 
   let selectedStars = 0;
   const starBtns = document.querySelectorAll('.star-btn');
@@ -1409,6 +1501,7 @@ function setupImageUpload(user, lic) {
   const section = document.getElementById('imgup-section');
   if (!lic || lic.expired) return;
   section.style.display = 'block';
+  document.getElementById('clips-locked-notice').style.display = 'none';
 
   const drop     = document.getElementById('imgup-drop');
   const fileInp  = document.getElementById('imgup-file');
