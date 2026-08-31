@@ -27,6 +27,7 @@
   --red: #DC2626;
   --yellow: #B45309;
   --blue: #5865F2;
+  --purple: #8B5CF6;
   --radius: 14px;
   --radius-sm: 10px;
 }
@@ -493,6 +494,63 @@ footer { border-top: 1px solid var(--border); padding: 40px 48px; display:flex; 
 .review-msg { font-family: 'JetBrains Mono', monospace; font-size: 12px; letter-spacing: .06em; margin-top: 12px; min-height: 18px; }
 .review-msg.ok  { color: var(--green); }
 .review-msg.err { color: var(--red); }
+
+/* ── ANON TOGGLE (shared by review + clip forms) ── */
+.anon-row {
+  display: flex; align-items: center; gap: 8px; margin-bottom: 14px;
+  font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--dim);
+  cursor: pointer; user-select: none;
+}
+.anon-row input[type=checkbox] { width: 14px; height: 14px; accent-color: var(--frost); cursor: pointer; flex-shrink: 0; }
+
+/* ── LIST HEADER + STAFF/DEV BADGES ── */
+.list-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; gap: 12px; }
+.list-header-title { font-family: 'Space Grotesk'; font-size: 18px; font-weight: 700; letter-spacing: -.01em; }
+.access-badge {
+  display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: 999px;
+  font-family: 'JetBrains Mono', monospace; font-size: 9.5px; letter-spacing: .1em; text-transform: uppercase;
+}
+.access-badge.staff { background: rgba(22,163,74,.1); border: 1px solid rgba(22,163,74,.28); color: var(--green); }
+.access-badge.dev   { background: rgba(139,92,246,.1); border: 1px solid rgba(139,92,246,.32); color: var(--purple); }
+
+/* ── REVIEW LIST ── */
+.review-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+.review-item {
+  border: 1px solid var(--border); background: var(--panel); border-radius: var(--radius-sm);
+  padding: 18px 20px;
+}
+.review-item-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; flex-wrap: wrap; }
+.review-item-user { display: flex; align-items: center; gap: 9px; }
+.review-item-avatar { width: 26px; height: 26px; border-radius: 50%; border: 1px solid var(--border-bright); }
+.review-item-name { font-family: 'Space Grotesk'; font-size: 13px; font-weight: 700; }
+.review-item-stars { font-size: 13px; color: var(--yellow); letter-spacing: 1px; }
+.review-item-text { font-family: 'JetBrains Mono', monospace; font-size: 12.5px; color: rgba(11,20,32,.78); line-height: 1.65; }
+.review-item-meta { display: flex; align-items: center; gap: 10px; margin-top: 10px; flex-wrap: wrap; }
+.pill-anon { font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: .08em; text-transform: uppercase; padding: 3px 9px; border-radius: 999px; background: var(--ghost-strong); color: var(--dim); }
+.pill-revealed { font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: .08em; text-transform: uppercase; padding: 3px 9px; border-radius: 999px; background: rgba(139,92,246,.1); border: 1px solid rgba(139,92,246,.3); color: var(--purple); }
+.empty-note { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--dim2); padding: 20px 0; }
+
+/* ── CLIP GRID ── */
+.clip-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; margin-bottom: 20px; }
+.clip-card { border: 1px solid var(--border); background: var(--panel); border-radius: var(--radius-sm); overflow: hidden; }
+.clip-card-imgs { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; }
+.clip-card-imgs img { width: 100%; height: 130px; object-fit: cover; display: block; }
+.clip-card-body { padding: 12px 14px; }
+.clip-card-top { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.clip-card-avatar { width: 20px; height: 20px; border-radius: 50%; border: 1px solid var(--border-bright); }
+.clip-card-name { font-family: 'Space Grotesk'; font-size: 12px; font-weight: 700; }
+.clip-card-caption { font-family: 'JetBrains Mono', monospace; font-size: 11.5px; color: var(--dim); line-height: 1.5; }
+.clip-card-meta { display: flex; align-items: center; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+
+/* ── DEV: REVOKE BUTTON ── */
+.btn-revoke {
+  background: rgba(220,38,38,.08); color: var(--red); border: 1px solid rgba(220,38,38,.3);
+  border-radius: 999px; padding: 5px 13px;
+  font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: .06em; text-transform: uppercase;
+  cursor: pointer; transition: background .2s, transform .15s;
+}
+.btn-revoke:hover { background: rgba(220,38,38,.16); transform: translateY(-1px); }
+.btn-revoke:disabled { opacity: .4; cursor: not-allowed; transform: none; }
 
 /* ── IMAGE UPLOAD SECTION ── */
 .imgup-section {
@@ -1037,10 +1095,19 @@ footer { border-top: 1px solid var(--border); padding: 40px 48px; display:flex; 
         <div class="locked-notice-sub">Activate a license to leave a review.</div>
       </div>
 
+      <!-- ON-SITE REVIEW LIST -->
+      <div id="reviews-list-wrap" style="display:none">
+        <div class="list-header">
+          <div class="list-header-title">All Reviews</div>
+          <div id="reviews-access-badges"></div>
+        </div>
+        <div class="review-list" id="review-list"></div>
+      </div>
+
       <!-- REVIEW SECTION -->
       <div class="review-section" id="review-section">
         <div class="review-section-title">Leave a Review</div>
-        <div class="review-section-sub">Share your experience with Blizzard Client. Reviews are posted in our Discord server for the community to see.</div>
+        <div class="review-section-sub">Share your experience with Blizzard Client. Reviews are posted here and in our Discord server for the community to see.</div>
         <div class="review-stars" id="review-stars">
           <button class="star-btn" data-star="1">★</button>
           <button class="star-btn" data-star="2">★</button>
@@ -1050,6 +1117,9 @@ footer { border-top: 1px solid var(--border); padding: 40px 48px; display:flex; 
         </div>
         <textarea class="review-textarea" id="review-text" placeholder="Tell others what you think about Blizzard Client..." maxlength="500"></textarea>
         <div class="review-char-count"><span id="review-char-used">0</span>/500</div>
+        <label class="anon-row" for="review-anon">
+          <input type="checkbox" id="review-anon"> Post anonymously (your name is still visible to Staff/Dev)
+        </label>
         <button class="btn-review" id="btn-review">Submit Review</button>
         <div class="review-msg" id="review-msg"></div>
       </div>
@@ -1071,10 +1141,19 @@ footer { border-top: 1px solid var(--border); padding: 40px 48px; display:flex; 
         <div class="locked-notice-sub">Activate a license to share screenshots and clips.</div>
       </div>
 
+      <!-- ON-SITE CLIP LIST -->
+      <div id="clips-list-wrap" style="display:none">
+        <div class="list-header">
+          <div class="list-header-title">All Clips</div>
+          <div id="clips-access-badges"></div>
+        </div>
+        <div class="clip-grid" id="clip-grid"></div>
+      </div>
+
       <!-- IMAGE UPLOAD SECTION -->
       <div class="imgup-section" id="imgup-section">
         <div class="imgup-section-title">Share a Screenshot</div>
-        <div class="imgup-section-sub">Upload screenshots of Blizzard Client in action. They'll be posted in our Discord showcase channel.</div>
+        <div class="imgup-section-sub">Upload screenshots of Blizzard Client in action. They'll be posted here and in our Discord showcase channel.</div>
         <div class="imgup-drop" id="imgup-drop">
           <input type="file" id="imgup-file" accept="image/png,image/jpeg,image/gif" multiple>
           <div class="imgup-drop-icon">
@@ -1087,6 +1166,9 @@ footer { border-top: 1px solid var(--border); padding: 40px 48px; display:flex; 
         </div>
         <div class="imgup-preview" id="imgup-preview"></div>
         <input class="imgup-caption" id="imgup-caption" type="text" placeholder="Optional caption..." maxlength="120">
+        <label class="anon-row" for="imgup-anon">
+          <input type="checkbox" id="imgup-anon"> Post anonymously (your name is still visible to Staff/Dev)
+        </label>
         <button class="btn-imgup" id="btn-imgup">Send to Discord</button>
         <div class="imgup-msg" id="imgup-msg"></div>
       </div>
@@ -1107,10 +1189,7 @@ footer { border-top: 1px solid var(--border); padding: 40px 48px; display:flex; 
 // ── CONFIG ────────────────────────────────────────────────────
 const DISCORD_CLIENT_ID = '1511344894290170046';
 const REDIRECT_URI      = 'https://blizzardweb.exasty.workers.dev/callback';
-const API_URL              = 'https://blizzardapi.exasty.workers.dev';
-const WEBHOOK_REVIEWS      = 'https://discord.com/api/webhooks/1513236038569427125/LH-kKMe_qO1ZsjuJUoju9bUDdokNnv2yz-g6YlIIP5KOM3b7yxKNNpS27FRLg0frLnz9';
-const WEBHOOK_BASEFINDS    = 'https://discord.com/api/webhooks/1513235580694167632/ZIMerNuW-O2endmJQZSvkIZwQHYKn4tB5T-_kfl2LKmmQv01rMUdHOzVoIsULilS9D7r';
-const WEBHOOK_LOGS         = 'https://discord.com/api/webhooks/1513529909115486290/K8iQxGVwGAKSYYgC5UEBf83JSEzWVjbVgIoNWRWN15OG0EoK-nrOY5dTikXdPZ8UCvqh';
+const API_URL            = 'https://blizzardapi.exasty.workers.dev';
 
 // ── CURSOR ────────────────────────────────────────────────────
 const $cursor = document.getElementById('cursor');
@@ -1198,6 +1277,11 @@ async function loadDiscordUser(token) {
   return res.json();
 }
 
+// ── GLOBAL STATE (used by reviews/clips + revoke) ───────────────
+let CURRENT_USER   = null; // { id, username, avatar, ... }
+let CURRENT_LIC    = null; // { key, plan, expires_at, ... }
+let CURRENT_ACCESS = { is_staff: false, is_dev: false };
+
 // ── RENDER DASHBOARD ──────────────────────────────────────────
 async function renderDashboard(user) {
   document.getElementById('dash-name').textContent = user.global_name || user.username;
@@ -1211,6 +1295,7 @@ async function renderDashboard(user) {
   switchTab('dashboard');
 
   showDashboard();
+  CURRENT_USER = user;
 
   // ── Check API for existing license ──
   try {
@@ -1226,21 +1311,23 @@ async function renderDashboard(user) {
   }
 
   setupRedeem(user);
+  // Even without a license, show the public review/clip lists (redacted).
+  loadReviews(); loadClips();
 }
 
 // ── APPLY LICENSE TO UI ───────────────────────────────────────
 function applyLicense(lic, user) {
-  const isExpired = lic.expired || (lic.plan !== 'lifetime' && lic.expires_at && new Date(lic.expires_at) < new Date());
+  const isExpired = lic.expired || (!['lifetime','dev','staff'].includes(lic.plan) && lic.expires_at && new Date(lic.expires_at) < new Date());
 
   const pill = document.getElementById('dash-status-pill');
   pill.className = 'status-pill ' + (isExpired ? 'expired' : 'active');
   document.getElementById('dash-status-text').textContent = isExpired ? 'Expired' : 'Active';
 
-  document.getElementById('dash-plan').textContent =
-    lic.plan === 'lifetime' ? '🌟 Lifetime' : '📅 Monthly';
+  const planLabels = { lifetime: '🌟 Lifetime', monthly: '📅 Monthly', dev: '👑 Dev', staff: '🛠️ Staff' };
+  document.getElementById('dash-plan').textContent = planLabels[lic.plan] || lic.plan;
 
   let expiresText = 'Never';
-  if (lic.plan !== 'lifetime' && lic.expires_at) {
+  if (!['lifetime','dev','staff'].includes(lic.plan) && lic.expires_at) {
     const exp      = new Date(lic.expires_at);
     const diff     = Math.max(0, exp - Date.now());
     const daysLeft = Math.ceil(diff / 86400000);
@@ -1296,12 +1383,169 @@ function applyLicense(lic, user) {
     document.getElementById('redeem-section').style.display = 'none';
   }
 
+  CURRENT_LIC = lic;
+
   if (user) { try { setupRedeem(user); } catch (e) { console.error('setupRedeem failed:', e); } }
   if (user) { try { loadHWIDStatus(user, lic); setupHWIDReset(user, lic); } catch (e) { console.error('HWID setup failed:', e); } }
   if (user) { try { setupReviews(user, lic); } catch (e) { console.error('setupReviews failed:', e); } }
   if (user) { try { setupImageUpload(user, lic); } catch (e) { console.error('setupImageUpload failed:', e); } }
+
+  // Resolve staff/dev access, then load reviews/clips with that context.
+  fetchAccess(user, lic).then(() => { loadReviews(); loadClips(); });
 }
 
+// ── ACCESS (Staff / Dev) ─────────────────────────────────────
+async function fetchAccess(user, lic) {
+  try {
+    const res  = await fetch(`${API_URL}/access/${user.id}?key=${encodeURIComponent(lic.key)}`);
+    const data = await res.json();
+    CURRENT_ACCESS = { is_staff: !!data.is_staff, is_dev: !!data.is_dev };
+  } catch (e) {
+    CURRENT_ACCESS = { is_staff: false, is_dev: false };
+  }
+}
+
+function renderAccessBadges(containerId) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  el.innerHTML = '';
+  if (CURRENT_ACCESS.is_dev)   el.insertAdjacentHTML('beforeend', `<span class="access-badge dev">👑 Dev View</span>`);
+  else if (CURRENT_ACCESS.is_staff) el.insertAdjacentHTML('beforeend', `<span class="access-badge staff">🛠️ Staff View</span>`);
+}
+
+function escapeHtml(s) {
+  return (s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function avatarUrlFor(discord_id, avatar) {
+  if (discord_id && avatar) return `https://cdn.discordapp.com/avatars/${discord_id}/${avatar}.png?size=64`;
+  return 'https://cdn.discordapp.com/embed/avatars/0.png';
+}
+
+// ── DEV: REVOKE + BAN ────────────────────────────────────────
+async function revokeUser(targetDiscordId, btn) {
+  if (!CURRENT_USER || !CURRENT_LIC) return;
+  if (!confirm(`Revoke this user's license and PERMANENTLY BAN them from the Discord server?\n\nDiscord ID: ${targetDiscordId}\n\nThis cannot be undone.`)) return;
+
+  if (btn) { btn.disabled = true; btn.textContent = 'Revoking…'; }
+  try {
+    const res = await fetch(`${API_URL}/dev/revoke`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        requester_discord_id: CURRENT_USER.id,
+        requester_key: CURRENT_LIC.key,
+        target_discord_id: targetDiscordId,
+      })
+    });
+    const result = await res.json();
+    if (result.success) {
+      toast('License revoked and user banned.', 'green');
+      loadReviews(); loadClips();
+    } else {
+      toast(result.error || 'Failed to revoke.', 'red');
+      if (btn) { btn.disabled = false; btn.textContent = 'Revoke & Ban'; }
+    }
+  } catch (e) {
+    toast('Could not reach server.', 'red');
+    if (btn) { btn.disabled = false; btn.textContent = 'Revoke & Ban'; }
+  }
+}
+window.revokeUser = revokeUser;
+
+// ── REVIEWS: LOAD + RENDER ───────────────────────────────────
+async function loadReviews() {
+  try {
+    const qs = (CURRENT_USER && CURRENT_LIC)
+      ? `?discord_id=${encodeURIComponent(CURRENT_USER.id)}&key=${encodeURIComponent(CURRENT_LIC.key)}`
+      : '';
+    const res  = await fetch(`${API_URL}/reviews${qs}`);
+    const data = await res.json();
+    CURRENT_ACCESS = { is_staff: !!data.is_staff, is_dev: !!data.is_dev };
+    renderReviews(data.reviews || []);
+  } catch (e) {
+    console.warn('Could not load reviews:', e.message);
+  }
+}
+
+function renderReviews(reviews) {
+  const wrap = document.getElementById('reviews-list-wrap');
+  const list = document.getElementById('review-list');
+  wrap.style.display = 'block';
+  renderAccessBadges('reviews-access-badges');
+
+  if (!reviews.length) {
+    list.innerHTML = `<div class="empty-note">No reviews yet — be the first!</div>`;
+    return;
+  }
+
+  list.innerHTML = reviews.map(r => {
+    const stars = '★'.repeat(r.stars) + '☆'.repeat(5 - r.stars);
+    const canRevoke = CURRENT_ACCESS.is_dev && r.discord_id;
+    return `
+      <div class="review-item">
+        <div class="review-item-top">
+          <div class="review-item-user">
+            <img class="review-item-avatar" src="${avatarUrlFor(r.discord_id, r.avatar)}" alt="">
+            <span class="review-item-name">${escapeHtml(r.username)}</span>
+          </div>
+          <span class="review-item-stars">${stars}</span>
+        </div>
+        <div class="review-item-text">${escapeHtml(r.text)}</div>
+        <div class="review-item-meta">
+          ${r.anonymous ? `<span class="${r.revealed_by_staff ? 'pill-revealed' : 'pill-anon'}">${r.revealed_by_staff ? '🕵️ anonymous — revealed for you' : '🕵️ anonymous'}</span>` : ''}
+          ${canRevoke ? `<button class="btn-revoke" onclick="revokeUser('${r.discord_id}', this)">Revoke & Ban</button>` : ''}
+        </div>
+      </div>`;
+  }).join('');
+}
+
+// ── CLIPS: LOAD + RENDER ─────────────────────────────────────
+async function loadClips() {
+  try {
+    const qs = (CURRENT_USER && CURRENT_LIC)
+      ? `?discord_id=${encodeURIComponent(CURRENT_USER.id)}&key=${encodeURIComponent(CURRENT_LIC.key)}`
+      : '';
+    const res  = await fetch(`${API_URL}/clips${qs}`);
+    const data = await res.json();
+    CURRENT_ACCESS = { is_staff: !!data.is_staff, is_dev: !!data.is_dev };
+    renderClips(data.clips || []);
+  } catch (e) {
+    console.warn('Could not load clips:', e.message);
+  }
+}
+
+function renderClips(clips) {
+  const wrap = document.getElementById('clips-list-wrap');
+  const grid = document.getElementById('clip-grid');
+  wrap.style.display = 'block';
+  renderAccessBadges('clips-access-badges');
+
+  if (!clips.length) {
+    grid.innerHTML = `<div class="empty-note">No clips yet — be the first to share one!</div>`;
+    return;
+  }
+
+  grid.innerHTML = clips.map(c => {
+    const canRevoke = CURRENT_ACCESS.is_dev && c.discord_id;
+    const imgs = (c.image_urls || []).slice(0, 3).map(u => `<img src="${u}" alt="">`).join('');
+    return `
+      <div class="clip-card">
+        <div class="clip-card-imgs">${imgs}</div>
+        <div class="clip-card-body">
+          <div class="clip-card-top">
+            <img class="clip-card-avatar" src="${avatarUrlFor(c.discord_id, c.avatar)}" alt="">
+            <span class="clip-card-name">${escapeHtml(c.username)}</span>
+          </div>
+          ${c.caption ? `<div class="clip-card-caption">${escapeHtml(c.caption)}</div>` : ''}
+          <div class="clip-card-meta">
+            ${c.anonymous ? `<span class="${c.revealed_by_staff ? 'pill-revealed' : 'pill-anon'}">${c.revealed_by_staff ? '🕵️ anonymous — revealed for you' : '🕵️ anonymous'}</span>` : ''}
+            ${canRevoke ? `<button class="btn-revoke" onclick="revokeUser('${c.discord_id}', this)">Revoke & Ban</button>` : ''}
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+}
 
 // ── HWID RESET ────────────────────────────────────────────────
 async function loadHWIDStatus(user, lic) {
@@ -1442,6 +1686,7 @@ document.getElementById('btn-logout').addEventListener('click', () => {
   localStorage.removeItem('blizz_dc_token');
   document.getElementById('dashboard-sidebar').style.display = 'none';
   document.getElementById('btn-burger').style.display = 'none';
+  CURRENT_USER = null; CURRENT_LIC = null; CURRENT_ACCESS = { is_staff: false, is_dev: false };
   closeBurger();
   switchTab('dashboard');
   showLogin(); toast('Logged out.');
@@ -1470,6 +1715,7 @@ function setupReviews(user, lic) {
   const starBtns = document.querySelectorAll('.star-btn');
   const textarea  = document.getElementById('review-text');
   const charUsed  = document.getElementById('review-char-used');
+  const anonBox   = document.getElementById('review-anon');
   const btn       = document.getElementById('btn-review');
   const msg       = document.getElementById('review-msg');
 
@@ -1500,53 +1746,34 @@ function setupReviews(user, lic) {
     btn.disabled = true; btn.textContent = 'Sending…';
 
     try {
-      const stars       = selectedStars;
-      const filledStars = '★'.repeat(stars) + '☆'.repeat(5 - stars);
-      const colorMap    = [0xED4245, 0xFF6B35, 0xFFA500, 0xFEE75C, 0xFFD700];
-
-      const payload = {
-        embeds: [{
-          color: colorMap[stars - 1],
-          description: `${filledStars}\n\n${textarea.value.trim()}`,
-          footer: { text: 'Blizzard Client' },
-          timestamp: new Date().toISOString()
-        }]
-      };
-
-      const res = await fetch(WEBHOOK_REVIEWS, {
+      const res = await fetch(`${API_URL}/review`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+        body: JSON.stringify({
+          discord_id: user.id,
+          key: lic.key,
+          username: user.username,
+          avatar: user.avatar,
+          stars: selectedStars,
+          text: textarea.value.trim(),
+          anonymous: anonBox.checked,
+        })
       });
+      const result = await res.json();
 
-      if (res.ok) {
-        // Send ID silently to logs
-        await fetch(WEBHOOK_LOGS, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            embeds: [{
-              color: 0x2b2d31,
-              description: `📝 **Review submitted**\nID: \`${user.id}\`\nStars: ${filledStars}\nMessage: ${textarea.value.trim()}`,
-              footer: { text: 'Use !revokebyid to act on this' },
-              timestamp: new Date().toISOString()
-            }]
-          })
-        }).catch(() => {});
-
+      if (result.success) {
         msg.textContent = '✓ Review posted!'; msg.className = 'review-msg ok';
         toast('Review submitted — thanks!', 'green');
-        textarea.value = ''; charUsed.textContent = '0'; selectedStars = 0;
+        textarea.value = ''; charUsed.textContent = '0'; selectedStars = 0; anonBox.checked = false;
         starBtns.forEach(s => s.classList.remove('active'));
-        btn.disabled = false; btn.textContent = 'Submit Review';
+        loadReviews();
       } else {
-        msg.textContent = '✗ Could not post review.'; msg.className = 'review-msg err';
-        btn.disabled = false; btn.textContent = 'Submit Review';
+        msg.textContent = '✗ ' + (result.error || 'Could not post review.'); msg.className = 'review-msg err';
       }
     } catch {
       msg.textContent = '✗ Could not reach server.'; msg.className = 'review-msg err';
-      btn.disabled = false; btn.textContent = 'Submit Review';
     }
+    btn.disabled = false; btn.textContent = 'Submit Review';
   });
 }
 
@@ -1590,6 +1817,7 @@ function setupImageUpload(user, lic) {
   const fileInp  = document.getElementById('imgup-file');
   const preview  = document.getElementById('imgup-preview');
   const caption  = document.getElementById('imgup-caption');
+  const anonBox  = document.getElementById('imgup-anon');
   const btn      = document.getElementById('btn-imgup');
   const msg      = document.getElementById('imgup-msg');
   let   files    = [];
@@ -1630,37 +1858,26 @@ function setupImageUpload(user, lic) {
     window._openImgModal(async () => {
       btn.disabled = true; btn.textContent = 'Uploading…';
       try {
-        const captionText = caption.value.trim();
-        const payload = {
-          content: captionText || null,
-        };
-
         const form = new FormData();
-        form.append('payload_json', JSON.stringify(payload));
-        files.forEach((f, i) => form.append(`files[${i}]`, f, f.name));
+        form.append('discord_id', user.id);
+        form.append('key', lic.key);
+        form.append('username', user.username);
+        if (user.avatar) form.append('avatar', user.avatar);
+        form.append('anonymous', String(anonBox.checked));
+        const captionText = caption.value.trim();
+        if (captionText) form.append('caption', captionText);
+        files.forEach((f) => form.append('images', f, f.name));
 
-        const res = await fetch(WEBHOOK_BASEFINDS, { method: 'POST', body: form });
+        const res = await fetch(`${API_URL}/clip`, { method: 'POST', body: form });
+        const result = await res.json();
 
-        if (res.ok) {
-          // Send ID silently to logs
-          await fetch(WEBHOOK_LOGS, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              embeds: [{
-                color: 0x2b2d31,
-                description: `📸 **Screenshot submitted**\nID: \`${user.id}\`\nFiles: ${files.length}${captionText ? `\nCaption: ${captionText}` : ''}`,
-                footer: { text: 'Use !revokebyid to act on this' },
-                timestamp: new Date().toISOString()
-              }]
-            })
-          }).catch(() => {});
+        if (result.success) {
           msg.textContent = '✓ Screenshot posted!'; msg.className = 'imgup-msg ok';
           toast('Screenshot sent!', 'green');
-          files = []; renderPreviews(); caption.value = '';
+          files = []; renderPreviews(); caption.value = ''; anonBox.checked = false;
+          loadClips();
         } else {
-          const err = await res.json().catch(() => ({}));
-          msg.textContent = '✗ ' + (err.message || 'Upload failed.'); msg.className = 'imgup-msg err';
+          msg.textContent = '✗ ' + (result.error || 'Upload failed.'); msg.className = 'imgup-msg err';
         }
       } catch {
         msg.textContent = '✗ Could not reach server.'; msg.className = 'imgup-msg err';
