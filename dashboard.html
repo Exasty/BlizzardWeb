@@ -528,7 +528,17 @@ footer { border-top: 1px solid var(--border); padding: 40px 48px; display:flex; 
 .review-item-meta { display: flex; align-items: center; gap: 10px; margin-top: 10px; flex-wrap: wrap; }
 .pill-anon { font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: .08em; text-transform: uppercase; padding: 3px 9px; border-radius: 999px; background: var(--ghost-strong); color: var(--dim); }
 .pill-revealed { font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: .08em; text-transform: uppercase; padding: 3px 9px; border-radius: 999px; background: rgba(139,92,246,.1); border: 1px solid rgba(139,92,246,.3); color: var(--purple); }
+.pill-edited { font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: .08em; text-transform: uppercase; padding: 3px 9px; border-radius: 999px; background: var(--ghost-strong); color: var(--dim2); }
 .empty-note { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--dim2); padding: 20px 0; }
+.btn-own-edit, .btn-own-delete {
+  border-radius: 999px; padding: 5px 13px;
+  font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: .06em; text-transform: uppercase;
+  cursor: pointer; transition: background .2s, transform .15s; border: 1px solid var(--border-bright); background: transparent; color: var(--dim);
+}
+.btn-own-edit:hover { border-color: var(--frost); color: var(--frost); transform: translateY(-1px); }
+.btn-own-delete { border-color: rgba(220,38,38,.3); color: var(--red); background: rgba(220,38,38,.06); }
+.btn-own-delete:hover { background: rgba(220,38,38,.14); transform: translateY(-1px); }
+.review-cooldown-note { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--dim); margin-bottom: 12px; }
 
 /* ── CLIP GRID ── */
 .clip-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; margin-bottom: 20px; }
@@ -1106,8 +1116,9 @@ footer { border-top: 1px solid var(--border); padding: 40px 48px; display:flex; 
 
       <!-- REVIEW SECTION -->
       <div class="review-section" id="review-section">
-        <div class="review-section-title">Leave a Review</div>
-        <div class="review-section-sub">Share your experience with Blizzard Client. Reviews are posted here and in our Discord server for the community to see.</div>
+        <div class="review-section-title" id="review-section-title">Leave a Review</div>
+        <div class="review-section-sub" id="review-section-sub">Share your experience with Blizzard Client. Reviews are posted here and in our Discord server for the community to see. You can post a new review once every 15 days, but you can edit your existing one anytime.</div>
+        <div class="review-cooldown-note" id="review-cooldown-note" style="display:none"></div>
         <div class="review-stars" id="review-stars">
           <button class="star-btn" data-star="1">★</button>
           <button class="star-btn" data-star="2">★</button>
@@ -1121,6 +1132,7 @@ footer { border-top: 1px solid var(--border); padding: 40px 48px; display:flex; 
           <input type="checkbox" id="review-anon"> Post anonymously (your name is still visible to Staff/Dev)
         </label>
         <button class="btn-review" id="btn-review">Submit Review</button>
+        <button class="btn-own-edit" id="btn-review-cancel" style="display:none;margin-left:8px;">Cancel Edit</button>
         <div class="review-msg" id="review-msg"></div>
       </div>
     </div>
@@ -1152,8 +1164,8 @@ footer { border-top: 1px solid var(--border); padding: 40px 48px; display:flex; 
 
       <!-- IMAGE UPLOAD SECTION -->
       <div class="imgup-section" id="imgup-section">
-        <div class="imgup-section-title">Share a Screenshot</div>
-        <div class="imgup-section-sub">Upload screenshots of Blizzard Client in action. They'll be posted here and in our Discord showcase channel.</div>
+        <div class="imgup-section-title" id="imgup-section-title">Share a Screenshot</div>
+        <div class="imgup-section-sub" id="imgup-section-sub">Upload screenshots or GIFs of Blizzard Client in action. They'll be posted here and in our Discord showcase channel.</div>
         <div class="imgup-drop" id="imgup-drop">
           <input type="file" id="imgup-file" accept="image/png,image/jpeg,image/gif" multiple>
           <div class="imgup-drop-icon">
@@ -1170,12 +1182,14 @@ footer { border-top: 1px solid var(--border); padding: 40px 48px; display:flex; 
           <input type="checkbox" id="imgup-anon"> Post anonymously (your name is still visible to Staff/Dev)
         </label>
         <button class="btn-imgup" id="btn-imgup">Send to Discord</button>
+        <button class="btn-own-edit" id="btn-imgup-cancel" style="display:none;margin-left:8px;">Cancel Edit</button>
         <div class="imgup-msg" id="imgup-msg"></div>
       </div>
     </div>
     <!-- /TAB: CLIPS -->
 
     </div>
+
   </main>
   </div>
 
@@ -1454,6 +1468,11 @@ async function revokeUser(targetDiscordId, btn) {
 window.revokeUser = revokeUser;
 
 // ── REVIEWS: LOAD + RENDER ───────────────────────────────────
+let REVIEW_COOLDOWN_DAYS_LEFT = 0;
+let EDITING_REVIEW_ID = null;
+let ALL_REVIEWS = [];
+let REVIEW_SELECTED_STARS = 0;
+
 async function loadReviews() {
   try {
     const qs = (CURRENT_USER && CURRENT_LIC)
@@ -1462,9 +1481,25 @@ async function loadReviews() {
     const res  = await fetch(`${API_URL}/reviews${qs}`);
     const data = await res.json();
     CURRENT_ACCESS = { is_staff: !!data.is_staff, is_dev: !!data.is_dev };
-    renderReviews(data.reviews || []);
+    REVIEW_COOLDOWN_DAYS_LEFT = data.cooldown_days_left || 0;
+    ALL_REVIEWS = data.reviews || [];
+    renderReviews(ALL_REVIEWS);
+    updateReviewCooldownUI();
   } catch (e) {
     console.warn('Could not load reviews:', e.message);
+  }
+}
+
+function updateReviewCooldownUI() {
+  const note = document.getElementById('review-cooldown-note');
+  const btn  = document.getElementById('btn-review');
+  if (!note || !btn) return;
+  if (EDITING_REVIEW_ID) { note.style.display = 'none'; return; } // cooldown doesn't apply to edits
+  if (REVIEW_COOLDOWN_DAYS_LEFT > 0) {
+    note.style.display = 'block';
+    note.textContent = `⏳ You can post a new review in ${REVIEW_COOLDOWN_DAYS_LEFT} day${REVIEW_COOLDOWN_DAYS_LEFT !== 1 ? 's' : ''}. You can still edit your existing review below.`;
+  } else {
+    note.style.display = 'none';
   }
 }
 
@@ -1481,26 +1516,89 @@ function renderReviews(reviews) {
 
   list.innerHTML = reviews.map(r => {
     const stars = '★'.repeat(r.stars) + '☆'.repeat(5 - r.stars);
-    const canRevoke = CURRENT_ACCESS.is_dev && r.discord_id;
+    const canRevoke = CURRENT_ACCESS.is_dev && r.discord_id && !r.is_mine;
     return `
       <div class="review-item">
         <div class="review-item-top">
           <div class="review-item-user">
             <img class="review-item-avatar" src="${avatarUrlFor(r.discord_id, r.avatar)}" alt="">
-            <span class="review-item-name">${escapeHtml(r.username)}</span>
+            <span class="review-item-name">${escapeHtml(r.username)}${r.is_mine ? ' (you)' : ''}</span>
           </div>
           <span class="review-item-stars">${stars}</span>
         </div>
         <div class="review-item-text">${escapeHtml(r.text)}</div>
         <div class="review-item-meta">
           ${r.anonymous ? `<span class="${r.revealed_by_staff ? 'pill-revealed' : 'pill-anon'}">${r.revealed_by_staff ? '🕵️ anonymous — revealed for you' : '🕵️ anonymous'}</span>` : ''}
+          ${r.edited ? `<span class="pill-edited">✎ edited</span>` : ''}
+          ${r.is_mine ? `<button class="btn-own-edit" onclick="startEditReview(${r.id})">Edit</button><button class="btn-own-delete" onclick="deleteReview(${r.id}, this)">Delete</button>` : ''}
           ${canRevoke ? `<button class="btn-revoke" onclick="revokeUser('${r.discord_id}', this)">Revoke & Ban</button>` : ''}
         </div>
       </div>`;
   }).join('');
 }
 
+function startEditReview(id) {
+  const r = ALL_REVIEWS.find(x => x.id === id);
+  if (!r) return;
+  EDITING_REVIEW_ID = id;
+
+  REVIEW_SELECTED_STARS = r.stars;
+  const starBtns = document.querySelectorAll('.star-btn');
+  starBtns.forEach(s => s.classList.toggle('active', Number(s.dataset.star) <= r.stars));
+  document.getElementById('review-text').value = r.text;
+  document.getElementById('review-char-used').textContent = r.text.length;
+  document.getElementById('review-anon').checked = !!r.anonymous;
+  document.getElementById('review-section-title').textContent = 'Edit Your Review';
+  document.getElementById('review-section-sub').textContent = 'Update your existing review — this does not count against the 15-day posting limit.';
+  document.getElementById('btn-review').textContent = 'Update Review';
+  document.getElementById('btn-review-cancel').style.display = 'inline-block';
+  updateReviewCooldownUI();
+
+  document.getElementById('tab-reviews').scrollIntoView({ behavior: 'smooth' });
+}
+
+function cancelEditReview() {
+  EDITING_REVIEW_ID = null;
+  REVIEW_SELECTED_STARS = 0;
+  document.querySelectorAll('.star-btn').forEach(s => s.classList.remove('active'));
+  document.getElementById('review-text').value = '';
+  document.getElementById('review-char-used').textContent = '0';
+  document.getElementById('review-anon').checked = false;
+  document.getElementById('review-section-title').textContent = 'Leave a Review';
+  document.getElementById('review-section-sub').textContent = 'Share your experience with Blizzard Client. Reviews are posted here and in our Discord server for the community to see. You can post a new review once every 15 days, but you can edit your existing one anytime.';
+  document.getElementById('btn-review').textContent = 'Submit Review';
+  document.getElementById('btn-review-cancel').style.display = 'none';
+  document.getElementById('review-msg').textContent = '';
+  updateReviewCooldownUI();
+}
+window.startEditReview = startEditReview;
+
+async function deleteReview(id, btn) {
+  if (!CURRENT_USER || !CURRENT_LIC) return;
+  if (!confirm('Delete this review? This cannot be undone.')) return;
+  if (btn) { btn.disabled = true; btn.textContent = 'Deleting…'; }
+  try {
+    const res = await fetch(`${API_URL}/review/${id}?discord_id=${encodeURIComponent(CURRENT_USER.id)}&key=${encodeURIComponent(CURRENT_LIC.key)}`, { method: 'DELETE' });
+    const result = await res.json();
+    if (result.success) {
+      toast('Review deleted.', 'green');
+      if (EDITING_REVIEW_ID === id) cancelEditReview();
+      loadReviews();
+    } else {
+      toast(result.error || 'Failed to delete.', 'red');
+      if (btn) { btn.disabled = false; btn.textContent = 'Delete'; }
+    }
+  } catch (e) {
+    toast('Could not reach server.', 'red');
+    if (btn) { btn.disabled = false; btn.textContent = 'Delete'; }
+  }
+}
+window.deleteReview = deleteReview;
+
 // ── CLIPS: LOAD + RENDER ─────────────────────────────────────
+let ALL_CLIPS = [];
+let EDITING_CLIP_ID = null;
+
 async function loadClips() {
   try {
     const qs = (CURRENT_USER && CURRENT_LIC)
@@ -1509,7 +1607,8 @@ async function loadClips() {
     const res  = await fetch(`${API_URL}/clips${qs}`);
     const data = await res.json();
     CURRENT_ACCESS = { is_staff: !!data.is_staff, is_dev: !!data.is_dev };
-    renderClips(data.clips || []);
+    ALL_CLIPS = data.clips || [];
+    renderClips(ALL_CLIPS);
   } catch (e) {
     console.warn('Could not load clips:', e.message);
   }
@@ -1527,25 +1626,80 @@ function renderClips(clips) {
   }
 
   grid.innerHTML = clips.map(c => {
-    const canRevoke = CURRENT_ACCESS.is_dev && c.discord_id;
-    const imgs = (c.image_urls || []).slice(0, 3).map(u => `<img src="${u}" alt="">`).join('');
+    const canRevoke = CURRENT_ACCESS.is_dev && c.discord_id && !c.is_mine;
+    const imgs = (c.image_urls || []).slice(0, 3).map(u => `<img src="${u}" alt="" loading="lazy">`).join('');
     return `
       <div class="clip-card">
         <div class="clip-card-imgs">${imgs}</div>
         <div class="clip-card-body">
           <div class="clip-card-top">
             <img class="clip-card-avatar" src="${avatarUrlFor(c.discord_id, c.avatar)}" alt="">
-            <span class="clip-card-name">${escapeHtml(c.username)}</span>
+            <span class="clip-card-name">${escapeHtml(c.username)}${c.is_mine ? ' (you)' : ''}</span>
           </div>
           ${c.caption ? `<div class="clip-card-caption">${escapeHtml(c.caption)}</div>` : ''}
           <div class="clip-card-meta">
             ${c.anonymous ? `<span class="${c.revealed_by_staff ? 'pill-revealed' : 'pill-anon'}">${c.revealed_by_staff ? '🕵️ anonymous — revealed for you' : '🕵️ anonymous'}</span>` : ''}
+            ${c.edited ? `<span class="pill-edited">✎ edited</span>` : ''}
+            ${c.is_mine ? `<button class="btn-own-edit" onclick="startEditClip(${c.id})">Edit</button><button class="btn-own-delete" onclick="deleteClip(${c.id}, this)">Delete</button>` : ''}
             ${canRevoke ? `<button class="btn-revoke" onclick="revokeUser('${c.discord_id}', this)">Revoke & Ban</button>` : ''}
           </div>
         </div>
       </div>`;
   }).join('');
 }
+
+function startEditClip(id) {
+  const c = ALL_CLIPS.find(x => x.id === id);
+  if (!c) return;
+  EDITING_CLIP_ID = id;
+
+  document.getElementById('imgup-caption').value = c.caption || '';
+  document.getElementById('imgup-anon').checked = !!c.anonymous;
+  document.getElementById('imgup-drop').style.display = 'none';
+  document.getElementById('imgup-preview').innerHTML = '';
+  document.getElementById('imgup-section-title').textContent = 'Edit Your Clip';
+  document.getElementById('imgup-section-sub').textContent = 'Update the caption or anonymity on your clip. The images themselves can\'t be swapped — upload a new clip for that.';
+  document.getElementById('btn-imgup').textContent = 'Update Clip';
+  document.getElementById('btn-imgup-cancel').style.display = 'inline-block';
+  document.getElementById('imgup-msg').textContent = '';
+
+  document.getElementById('tab-clips').scrollIntoView({ behavior: 'smooth' });
+}
+
+function cancelEditClip() {
+  EDITING_CLIP_ID = null;
+  document.getElementById('imgup-caption').value = '';
+  document.getElementById('imgup-anon').checked = false;
+  document.getElementById('imgup-drop').style.display = '';
+  document.getElementById('imgup-section-title').textContent = 'Share a Screenshot';
+  document.getElementById('imgup-section-sub').textContent = 'Upload screenshots or GIFs of Blizzard Client in action. They\'ll be posted here and in our Discord showcase channel.';
+  document.getElementById('btn-imgup').textContent = 'Send to Discord';
+  document.getElementById('btn-imgup-cancel').style.display = 'none';
+  document.getElementById('imgup-msg').textContent = '';
+}
+window.startEditClip = startEditClip;
+
+async function deleteClip(id, btn) {
+  if (!CURRENT_USER || !CURRENT_LIC) return;
+  if (!confirm('Delete this clip from the site? This cannot be undone. (The Discord post itself stays up.)')) return;
+  if (btn) { btn.disabled = true; btn.textContent = 'Deleting…'; }
+  try {
+    const res = await fetch(`${API_URL}/clip/${id}?discord_id=${encodeURIComponent(CURRENT_USER.id)}&key=${encodeURIComponent(CURRENT_LIC.key)}`, { method: 'DELETE' });
+    const result = await res.json();
+    if (result.success) {
+      toast('Clip deleted.', 'green');
+      if (EDITING_CLIP_ID === id) cancelEditClip();
+      loadClips();
+    } else {
+      toast(result.error || 'Failed to delete.', 'red');
+      if (btn) { btn.disabled = false; btn.textContent = 'Delete'; }
+    }
+  } catch (e) {
+    toast('Could not reach server.', 'red');
+    if (btn) { btn.disabled = false; btn.textContent = 'Delete'; }
+  }
+}
+window.deleteClip = deleteClip;
 
 // ── HWID RESET ────────────────────────────────────────────────
 async function loadHWIDStatus(user, lic) {
@@ -1711,12 +1865,12 @@ function setupReviews(user, lic) {
   section.style.display = 'block';
   document.getElementById('reviews-locked-notice').style.display = 'none';
 
-  let selectedStars = 0;
-  const starBtns = document.querySelectorAll('.star-btn');
+  const starBtns  = document.querySelectorAll('.star-btn');
   const textarea  = document.getElementById('review-text');
   const charUsed  = document.getElementById('review-char-used');
   const anonBox   = document.getElementById('review-anon');
   const btn       = document.getElementById('btn-review');
+  const cancelBtn = document.getElementById('btn-review-cancel');
   const msg       = document.getElementById('review-msg');
 
   // Star interaction
@@ -1725,11 +1879,11 @@ function setupReviews(user, lic) {
       starBtns.forEach(s => s.classList.toggle('active', Number(s.dataset.star) <= Number(b.dataset.star)));
     });
     b.addEventListener('mouseleave', () => {
-      starBtns.forEach(s => s.classList.toggle('active', Number(s.dataset.star) <= selectedStars));
+      starBtns.forEach(s => s.classList.toggle('active', Number(s.dataset.star) <= REVIEW_SELECTED_STARS));
     });
     b.addEventListener('click', () => {
-      selectedStars = Number(b.dataset.star);
-      starBtns.forEach(s => s.classList.toggle('active', Number(s.dataset.star) <= selectedStars));
+      REVIEW_SELECTED_STARS = Number(b.dataset.star);
+      starBtns.forEach(s => s.classList.toggle('active', Number(s.dataset.star) <= REVIEW_SELECTED_STARS));
     });
   });
 
@@ -1738,23 +1892,33 @@ function setupReviews(user, lic) {
     charUsed.textContent = textarea.value.length;
   });
 
+  cancelBtn.addEventListener('click', () => cancelEditReview());
+
   btn.addEventListener('click', async () => {
     msg.textContent = ''; msg.className = 'review-msg';
-    if (selectedStars === 0) { msg.textContent = '⚠ Please select a star rating.'; msg.className = 'review-msg err'; return; }
+    if (REVIEW_SELECTED_STARS === 0) { msg.textContent = '⚠ Please select a star rating.'; msg.className = 'review-msg err'; return; }
     if (!textarea.value.trim()) { msg.textContent = '⚠ Please write a short review.'; msg.className = 'review-msg err'; return; }
 
-    btn.disabled = true; btn.textContent = 'Sending…';
+    // Cooldown only blocks NEW reviews — editing your existing one is always allowed.
+    if (!EDITING_REVIEW_ID && REVIEW_COOLDOWN_DAYS_LEFT > 0) {
+      msg.textContent = `⚠ You can post another review in ${REVIEW_COOLDOWN_DAYS_LEFT} day${REVIEW_COOLDOWN_DAYS_LEFT !== 1 ? 's' : ''}.`;
+      msg.className = 'review-msg err';
+      return;
+    }
+
+    const isEdit = !!EDITING_REVIEW_ID;
+    btn.disabled = true; btn.textContent = isEdit ? 'Updating…' : 'Sending…';
 
     try {
-      const res = await fetch(`${API_URL}/review`, {
-        method: 'POST',
+      const res = await fetch(`${API_URL}/review${isEdit ? '/' + EDITING_REVIEW_ID : ''}`, {
+        method: isEdit ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           discord_id: user.id,
           key: lic.key,
           username: user.username,
           avatar: user.avatar,
-          stars: selectedStars,
+          stars: REVIEW_SELECTED_STARS,
           text: textarea.value.trim(),
           anonymous: anonBox.checked,
         })
@@ -1762,18 +1926,21 @@ function setupReviews(user, lic) {
       const result = await res.json();
 
       if (result.success) {
-        msg.textContent = '✓ Review posted!'; msg.className = 'review-msg ok';
-        toast('Review submitted — thanks!', 'green');
-        textarea.value = ''; charUsed.textContent = '0'; selectedStars = 0; anonBox.checked = false;
+        msg.textContent = isEdit ? '✓ Review updated!' : '✓ Review posted!'; msg.className = 'review-msg ok';
+        toast(isEdit ? 'Review updated.' : 'Review submitted — thanks!', 'green');
+        const wasEditing = isEdit;
+        textarea.value = ''; charUsed.textContent = '0'; REVIEW_SELECTED_STARS = 0; anonBox.checked = false;
         starBtns.forEach(s => s.classList.remove('active'));
+        if (wasEditing) cancelEditReview();
         loadReviews();
       } else {
         msg.textContent = '✗ ' + (result.error || 'Could not post review.'); msg.className = 'review-msg err';
+        if (typeof result.cooldown_days_left === 'number') REVIEW_COOLDOWN_DAYS_LEFT = result.cooldown_days_left;
       }
     } catch {
       msg.textContent = '✗ Could not reach server.'; msg.className = 'review-msg err';
     }
-    btn.disabled = false; btn.textContent = 'Submit Review';
+    btn.disabled = false; btn.textContent = isEdit && EDITING_REVIEW_ID ? 'Update Review' : 'Submit Review';
   });
 }
 
@@ -1813,14 +1980,15 @@ function setupImageUpload(user, lic) {
   section.style.display = 'block';
   document.getElementById('clips-locked-notice').style.display = 'none';
 
-  const drop     = document.getElementById('imgup-drop');
-  const fileInp  = document.getElementById('imgup-file');
-  const preview  = document.getElementById('imgup-preview');
-  const caption  = document.getElementById('imgup-caption');
-  const anonBox  = document.getElementById('imgup-anon');
-  const btn      = document.getElementById('btn-imgup');
-  const msg      = document.getElementById('imgup-msg');
-  let   files    = [];
+  const drop      = document.getElementById('imgup-drop');
+  const fileInp   = document.getElementById('imgup-file');
+  const preview   = document.getElementById('imgup-preview');
+  const caption   = document.getElementById('imgup-caption');
+  const anonBox   = document.getElementById('imgup-anon');
+  const btn       = document.getElementById('btn-imgup');
+  const cancelBtn = document.getElementById('btn-imgup-cancel');
+  const msg       = document.getElementById('imgup-msg');
+  let   files     = [];
 
   function renderPreviews() {
     preview.innerHTML = '';
@@ -1851,8 +2019,42 @@ function setupImageUpload(user, lic) {
     renderPreviews();
   });
 
-  btn.addEventListener('click', () => {
+  cancelBtn.addEventListener('click', () => { files = []; renderPreviews(); cancelEditClip(); });
+
+  btn.addEventListener('click', async () => {
     msg.textContent = ''; msg.className = 'imgup-msg';
+
+    // ── EDIT MODE: caption/anonymous only, no image re-upload ──
+    if (EDITING_CLIP_ID) {
+      const id = EDITING_CLIP_ID;
+      btn.disabled = true; btn.textContent = 'Updating…';
+      try {
+        const res = await fetch(`${API_URL}/clip/${id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            discord_id: user.id,
+            key: lic.key,
+            caption: caption.value.trim(),
+            anonymous: anonBox.checked,
+          })
+        });
+        const result = await res.json();
+        if (result.success) {
+          toast('Clip updated.', 'green');
+          cancelEditClip();
+          loadClips();
+        } else {
+          msg.textContent = '✗ ' + (result.error || 'Could not update clip.'); msg.className = 'imgup-msg err';
+        }
+      } catch {
+        msg.textContent = '✗ Could not reach server.'; msg.className = 'imgup-msg err';
+      }
+      btn.disabled = false; btn.textContent = EDITING_CLIP_ID ? 'Update Clip' : 'Send to Discord';
+      return;
+    }
+
+    // ── NEW UPLOAD ──
     if (files.length === 0) { msg.textContent = '⚠ Please select at least one image.'; msg.className = 'imgup-msg err'; return; }
 
     window._openImgModal(async () => {
@@ -1872,8 +2074,8 @@ function setupImageUpload(user, lic) {
         const result = await res.json();
 
         if (result.success) {
-          msg.textContent = '✓ Screenshot posted!'; msg.className = 'imgup-msg ok';
-          toast('Screenshot sent!', 'green');
+          msg.textContent = '✓ Posted!'; msg.className = 'imgup-msg ok';
+          toast('Clip sent!', 'green');
           files = []; renderPreviews(); caption.value = ''; anonBox.checked = false;
           loadClips();
         } else {
