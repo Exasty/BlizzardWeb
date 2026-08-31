@@ -540,6 +540,22 @@ footer { border-top: 1px solid var(--border); padding: 40px 48px; display:flex; 
 .btn-own-delete:hover { background: rgba(220,38,38,.14); transform: translateY(-1px); }
 .review-cooldown-note { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--dim); margin-bottom: 12px; }
 
+/* ── MODERATION WARNING BANNER (Reviews / Clips tabs) ── */
+.mod-warning {
+  display: flex; align-items: flex-start; gap: 14px;
+  border: 1px solid rgba(220,38,38,.25); background: rgba(220,38,38,.05);
+  border-radius: var(--radius); padding: 18px 22px; margin-bottom: 20px;
+}
+.mod-warning-icon {
+  width: 32px; height: 32px; border-radius: 8px; flex-shrink: 0;
+  background: rgba(220,38,38,.1); border: 1px solid rgba(220,38,38,.28); color: var(--red);
+  display: flex; align-items: center; justify-content: center;
+}
+.mod-warning-icon svg { width: 16px; height: 16px; }
+.mod-warning-title { font-family: 'Space Grotesk'; font-size: 13.5px; font-weight: 700; letter-spacing: -.01em; color: var(--ink); margin-bottom: 4px; }
+.mod-warning-text { font-family: 'JetBrains Mono', monospace; font-size: 11.5px; color: var(--dim); line-height: 1.65; }
+.mod-warning-text strong { color: var(--red); }
+
 /* ── CLIP GRID ── */
 .clip-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; margin-bottom: 20px; }
 .clip-card { border: 1px solid var(--border); background: var(--panel); border-radius: var(--radius-sm); overflow: hidden; }
@@ -1087,6 +1103,17 @@ footer { border-top: 1px solid var(--border); padding: 40px 48px; display:flex; 
         <button class="btn-hwid-reset" id="btn-hwid-reset" disabled>Reset HWID</button>
         <div class="hwid-msg" id="hwid-msg"></div>
       </div>
+
+      <!-- DEV-ONLY: STAFF ACTIVITY LOG -->
+      <div class="hwid-section" id="staff-log-section" style="display:none">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:16px;gap:20px;">
+          <div>
+            <div class="hwid-section-title">👑 Staff Activity Log <span class="access-badge dev" style="margin-left:6px;">Dev Only</span></div>
+            <div class="hwid-section-sub">Every license revoke + ban "Execute" action, newest first. Use this to check whether a Staff member is abusing the power.</div>
+          </div>
+        </div>
+        <div class="review-list" id="staff-log-list"></div>
+      </div>
     </div>
     <!-- /TAB: DASHBOARD -->
 
@@ -1095,6 +1122,16 @@ footer { border-top: 1px solid var(--border); padding: 40px 48px; display:flex; 
       <div class="dash-header">
         <div class="dash-eyebrow">Community</div>
         <h1 class="dash-title">Leave a <em>Review</em></h1>
+      </div>
+
+      <div class="mod-warning">
+        <div class="mod-warning-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        </div>
+        <div>
+          <div class="mod-warning-title">Everything posted here is moderated</div>
+          <div class="mod-warning-text">Reviews are visible to the whole community and our staff. Hate speech, harassment, slurs, spam, and other rule-breaking content is not tolerated. <strong>Violations result in an immediate license revocation and a permanent ban</strong> — no warnings.</div>
+        </div>
       </div>
 
       <div class="locked-notice" id="reviews-locked-notice">
@@ -1143,6 +1180,16 @@ footer { border-top: 1px solid var(--border); padding: 40px 48px; display:flex; 
       <div class="dash-header">
         <div class="dash-eyebrow">Showcase</div>
         <h1 class="dash-title">Share a <em>Clip</em></h1>
+      </div>
+
+      <div class="mod-warning">
+        <div class="mod-warning-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        </div>
+        <div>
+          <div class="mod-warning-title">Everything posted here is moderated</div>
+          <div class="mod-warning-text">Clips are visible to the whole community and our staff. NSFW content, hate speech, harassment, and other rule-breaking uploads are not tolerated. <strong>Violations result in an immediate license revocation and a permanent ban</strong> — no warnings.</div>
+        </div>
       </div>
 
       <div class="locked-notice" id="clips-locked-notice">
@@ -1417,6 +1464,44 @@ async function fetchAccess(user, lic) {
   } catch (e) {
     CURRENT_ACCESS = { is_staff: false, is_dev: false };
   }
+  const logSection = document.getElementById('staff-log-section');
+  if (logSection) {
+    logSection.style.display = CURRENT_ACCESS.is_dev ? 'block' : 'none';
+    if (CURRENT_ACCESS.is_dev) loadStaffActions();
+  }
+}
+
+async function loadStaffActions() {
+  const list = document.getElementById('staff-log-list');
+  if (!list || !CURRENT_USER || !CURRENT_LIC) return;
+  try {
+    const res = await fetch(`${API_URL}/dev/actions?discord_id=${encodeURIComponent(CURRENT_USER.id)}&key=${encodeURIComponent(CURRENT_LIC.key)}`);
+    const data = await res.json();
+    if (!res.ok) { list.innerHTML = `<div class="empty-note">${escapeHtml(data.error || 'Could not load log.')}</div>`; return; }
+    const actions = data.actions || [];
+    if (!actions.length) { list.innerHTML = `<div class="empty-note">No Execute actions logged yet.</div>`; return; }
+
+    list.innerHTML = actions.map(a => {
+      const roleBadge = a.actor_role === 'dev' ? `<span class="access-badge dev">👑 dev</span>` : `<span class="access-badge staff">🛠️ staff</span>`;
+      const when = new Date(a.created_at).toLocaleString();
+      return `
+        <div class="review-item">
+          <div class="review-item-top">
+            <div class="review-item-user">
+              <span class="review-item-name">${escapeHtml(a.actor_username || 'Unknown')} (<code>${escapeHtml(a.actor_discord_id)}</code>)</span>
+              ${roleBadge}
+            </div>
+            <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim2);">${when}</span>
+          </div>
+          <div class="review-item-text">
+            Executed on target <code>${escapeHtml(a.target_discord_id)}</code> — key ${a.key_revoked ? `<code>${escapeHtml(a.key_revoked)}</code>` : 'none on file'}, banned: ${a.banned ? 'yes' : 'no'}.
+            ${a.reason ? `<br>Reason: ${escapeHtml(a.reason)}` : ''}
+          </div>
+        </div>`;
+    }).join('');
+  } catch (e) {
+    list.innerHTML = `<div class="empty-note">Could not reach server: ${escapeHtml(e.message)}</div>`;
+  }
 }
 
 function renderAccessBadges(containerId) {
@@ -1441,7 +1526,7 @@ async function revokeUser(targetDiscordId, btn) {
   if (!CURRENT_USER || !CURRENT_LIC) return;
   if (!confirm(`Revoke this user's license and PERMANENTLY BAN them from the Discord server?\n\nDiscord ID: ${targetDiscordId}\n\nThis cannot be undone.`)) return;
 
-  if (btn) { btn.disabled = true; btn.textContent = 'Revoking…'; }
+  if (btn) { btn.disabled = true; btn.textContent = 'Executing…'; }
   try {
     const res = await fetch(`${API_URL}/dev/revoke`, {
       method: 'POST',
@@ -1449,6 +1534,7 @@ async function revokeUser(targetDiscordId, btn) {
       body: JSON.stringify({
         requester_discord_id: CURRENT_USER.id,
         requester_key: CURRENT_LIC.key,
+        requester_username: CURRENT_USER.username,
         target_discord_id: targetDiscordId,
       })
     });
@@ -1457,12 +1543,12 @@ async function revokeUser(targetDiscordId, btn) {
       toast('License revoked and user banned.', 'green');
       loadReviews(); loadClips();
     } else {
-      toast(result.error || 'Failed to revoke.', 'red');
-      if (btn) { btn.disabled = false; btn.textContent = 'Revoke & Ban'; }
+      toast(result.error || `Failed to execute (${res.status}).`, 'red');
+      if (btn) { btn.disabled = false; btn.textContent = 'Execute'; }
     }
   } catch (e) {
-    toast('Could not reach server.', 'red');
-    if (btn) { btn.disabled = false; btn.textContent = 'Revoke & Ban'; }
+    toast('Could not reach server: ' + e.message, 'red');
+    if (btn) { btn.disabled = false; btn.textContent = 'Execute'; }
   }
 }
 window.revokeUser = revokeUser;
@@ -1516,7 +1602,7 @@ function renderReviews(reviews) {
 
   list.innerHTML = reviews.map(r => {
     const stars = '★'.repeat(r.stars) + '☆'.repeat(5 - r.stars);
-    const canRevoke = CURRENT_ACCESS.is_dev && r.discord_id && !r.is_mine;
+    const canRevoke = CURRENT_ACCESS.is_staff && r.discord_id && !r.is_mine;
     return `
       <div class="review-item">
         <div class="review-item-top">
@@ -1531,7 +1617,7 @@ function renderReviews(reviews) {
           ${r.anonymous ? `<span class="${r.revealed_by_staff ? 'pill-revealed' : 'pill-anon'}">${r.revealed_by_staff ? '🕵️ anonymous — revealed for you' : '🕵️ anonymous'}</span>` : ''}
           ${r.edited ? `<span class="pill-edited">✎ edited</span>` : ''}
           ${r.is_mine ? `<button class="btn-own-edit" onclick="startEditReview(${r.id})">Edit</button><button class="btn-own-delete" onclick="deleteReview(${r.id}, this)">Delete</button>` : ''}
-          ${canRevoke ? `<button class="btn-revoke" onclick="revokeUser('${r.discord_id}', this)">Revoke & Ban</button>` : ''}
+          ${canRevoke ? `<button class="btn-revoke" onclick="revokeUser('${r.discord_id}', this)">Execute</button>` : ''}
         </div>
       </div>`;
   }).join('');
@@ -1589,7 +1675,7 @@ async function deleteReview(id, btn) {
       if (btn) { btn.disabled = false; btn.textContent = 'Delete'; }
     }
   } catch (e) {
-    toast('Could not reach server.', 'red');
+    toast('Could not reach server: ' + e.message, 'red');
     if (btn) { btn.disabled = false; btn.textContent = 'Delete'; }
   }
 }
@@ -1626,7 +1712,7 @@ function renderClips(clips) {
   }
 
   grid.innerHTML = clips.map(c => {
-    const canRevoke = CURRENT_ACCESS.is_dev && c.discord_id && !c.is_mine;
+    const canRevoke = CURRENT_ACCESS.is_staff && c.discord_id && !c.is_mine;
     const imgs = (c.image_urls || []).slice(0, 3).map(u => `<img src="${u}" alt="" loading="lazy">`).join('');
     return `
       <div class="clip-card">
@@ -1641,7 +1727,7 @@ function renderClips(clips) {
             ${c.anonymous ? `<span class="${c.revealed_by_staff ? 'pill-revealed' : 'pill-anon'}">${c.revealed_by_staff ? '🕵️ anonymous — revealed for you' : '🕵️ anonymous'}</span>` : ''}
             ${c.edited ? `<span class="pill-edited">✎ edited</span>` : ''}
             ${c.is_mine ? `<button class="btn-own-edit" onclick="startEditClip(${c.id})">Edit</button><button class="btn-own-delete" onclick="deleteClip(${c.id}, this)">Delete</button>` : ''}
-            ${canRevoke ? `<button class="btn-revoke" onclick="revokeUser('${c.discord_id}', this)">Revoke & Ban</button>` : ''}
+            ${canRevoke ? `<button class="btn-revoke" onclick="revokeUser('${c.discord_id}', this)">Execute</button>` : ''}
           </div>
         </div>
       </div>`;
@@ -1695,7 +1781,7 @@ async function deleteClip(id, btn) {
       if (btn) { btn.disabled = false; btn.textContent = 'Delete'; }
     }
   } catch (e) {
-    toast('Could not reach server.', 'red');
+    toast('Could not reach server: ' + e.message, 'red');
     if (btn) { btn.disabled = false; btn.textContent = 'Delete'; }
   }
 }
@@ -1774,7 +1860,7 @@ function setupHWIDReset(user, lic) {
         btn.disabled    = false;
       }
     } catch (e) {
-      msg.textContent = '✗ Could not reach server.';
+      msg.textContent = '✗ Could not reach server: ' + e.message;
       msg.className   = 'hwid-msg err';
       btn.disabled    = false;
     }
@@ -1824,7 +1910,7 @@ function setupRedeem(user) {
         newBtn.textContent = 'Activate';
       }
     } catch (e) {
-      msg.textContent  = '✗ Could not reach server. Is the backend running?';
+      msg.textContent  = '✗ Could not reach server: ' + e.message;
       msg.className    = 'redeem-msg err';
       newBtn.disabled  = false;
       newBtn.textContent = 'Activate';
@@ -1937,8 +2023,8 @@ function setupReviews(user, lic) {
         msg.textContent = '✗ ' + (result.error || 'Could not post review.'); msg.className = 'review-msg err';
         if (typeof result.cooldown_days_left === 'number') REVIEW_COOLDOWN_DAYS_LEFT = result.cooldown_days_left;
       }
-    } catch {
-      msg.textContent = '✗ Could not reach server.'; msg.className = 'review-msg err';
+    } catch (e) {
+      msg.textContent = '✗ Could not reach server: ' + e.message; msg.className = 'review-msg err';
     }
     btn.disabled = false; btn.textContent = isEdit && EDITING_REVIEW_ID ? 'Update Review' : 'Submit Review';
   });
@@ -2047,8 +2133,8 @@ function setupImageUpload(user, lic) {
         } else {
           msg.textContent = '✗ ' + (result.error || 'Could not update clip.'); msg.className = 'imgup-msg err';
         }
-      } catch {
-        msg.textContent = '✗ Could not reach server.'; msg.className = 'imgup-msg err';
+      } catch (e) {
+        msg.textContent = '✗ Could not reach server: ' + e.message; msg.className = 'imgup-msg err';
       }
       btn.disabled = false; btn.textContent = EDITING_CLIP_ID ? 'Update Clip' : 'Send to Discord';
       return;
@@ -2081,8 +2167,8 @@ function setupImageUpload(user, lic) {
         } else {
           msg.textContent = '✗ ' + (result.error || 'Upload failed.'); msg.className = 'imgup-msg err';
         }
-      } catch {
-        msg.textContent = '✗ Could not reach server.'; msg.className = 'imgup-msg err';
+      } catch (e) {
+        msg.textContent = '✗ Could not reach server: ' + e.message; msg.className = 'imgup-msg err';
       }
       btn.disabled = false; btn.textContent = 'Send to Discord';
     });
